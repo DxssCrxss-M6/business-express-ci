@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Business Express CI</title>
+<style>
+:root{--bg:#FAFAF7;--tx:#17201B;--mu:#4A554E;--bd:#D9DDD8;--cd:#fff;--nv:#0B1F4B;--or:#F77F00;color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0F1420;--tx:#EEF1F7;--mu:#A9B2C3;--bd:#2A3350;--cd:#182036;--nv:#1B2E66;color-scheme:dark}}
+body{margin:0;background:var(--bg);color:var(--tx);font-family:system-ui,sans-serif}
+main{max-width:520px;margin:auto;padding:16px;display:flex;flex-direction:column;gap:12px}
+h1{margin:0;background:var(--nv);color:#fff;padding:18px 16px;font-size:20px}
+h2{margin:4px 0}
+input,textarea,select{width:100%;box-sizing:border-box;min-height:44px;padding:8px 12px;font-size:16px;border:1px solid var(--bd);border-radius:10px;background:var(--cd);color:var(--tx)}
+button{min-height:48px;font-size:16px;font-weight:700;border-radius:12px;padding:0 16px;border:0}
+.btn{background:var(--or);color:#17201B}
+.btn2{background:transparent;color:var(--tx);border:1px solid var(--bd)}
+.card,section{background:var(--cd);border:1px solid var(--bd);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:8px}
+.mu{color:var(--mu);margin:0;font-size:14px}
+[hidden]{display:none!important}
+</style></head>
+<body>
+<h1>Business Express CI</h1>
+<main>
+<section>
+<div id="out"><h2>Connexion</h2>
+<input id="em" type="email" placeholder="E-mail" autocomplete="email">
+<input id="pw" type="password" placeholder="Mot de passe (6 caractères minimum)" autocomplete="current-password">
+<button class="btn" id="login" type="button">Se connecter</button>
+<button class="btn2" id="signup" type="button">Créer un compte</button></div>
+<div id="in" hidden><p class="mu" id="who"></p><button class="btn2" id="logout" type="button">Se déconnecter</button></div>
+<p class="mu" id="amsg"></p>
+</section>
+<label>Rechercher<input id="q" type="text" placeholder="Livre, formation, modèle…"></label>
+<div id="list"></div>
+<section id="pay" hidden></section>
+<section id="sell" hidden>
+<h2>Vendre un produit</h2>
+<label>Titre<input id="ti" type="text" maxlength="80"></label>
+<label>Description<textarea id="de" rows="3" maxlength="400"></textarea></label>
+<label>Prix (FCFA)<input id="pr" type="number" inputmode="numeric"></label>
+<label>Ton nom<input id="se" type="text" maxlength="40"></label>
+<label>Lien du fichier (Drive, etc.)<input id="li" type="text" maxlength="300"></label>
+<button class="btn" id="go" type="button">Publier mon produit</button>
+<p class="mu" id="msg"></p>
+</section>
+</main>
+<script type="module">
+import {initializeApp} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-app.js";
+import {getAuth,onAuthStateChanged,signInWithEmailAndPassword,createUserWithEmailAndPassword,signOut} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-auth.js";
+import {getFirestore,collection,addDoc,onSnapshot,query,orderBy,deleteDoc,doc} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-firestore.js";
+const app=initializeApp({
+  apiKey:"AIzaSyC4DsEYJOfILmytTRfgaPr1QymJGgp-87o",
+  authDomain:"business-express-ci.firebaseapp.com",
+  projectId:"business-express-ci",
+  storageBucket:"business-express-ci.firebasestorage.app",
+  messagingSenderId:"45446517286",
+  appId:"1:45446517286:web:1aaf5de2d58429b61e4ce7"
+});
+const auth=getAuth(app),db=getFirestore(app);
+let items=[],user=null;
+const $=i=>document.getElementById(i);
+function el(t,x,c){const e=document.createElement(t);if(x!=null)e.textContent=x;if(c)e.className=c;return e}
+function render(){
+  const q=$('q').value.toLowerCase(),l=$('list');l.replaceChildren();
+  const f=items.filter(i=>((i.title||'')+' '+(i.seller||'')).toLowerCase().includes(q));
+  if(!f.length){l.append(el('p','Aucun produit pour l’instant.','mu'));return}
+  f.forEach(i=>{
+    const c=el('div',null,'card');
+    c.append(el('b',i.title),el('p',i.desc,'mu'),el('p',i.seller+' · '+i.price+' FCFA','mu'));
+    const b=el('button','Acheter','btn');b.type='button';b.onclick=()=>pay(i);c.append(b);
+    if(user&&user.uid===i.uid){
+      const d=el('button','Supprimer','btn2');d.type='button';
+      d.onclick=()=>{if(confirm('Supprimer ce produit ?'))deleteDoc(doc(db,'products',i.id))};c.append(d);
+    }
+    l.append(c);
+  });
+}
+function pay(i){
+  const p=$('pay');p.hidden=false;p.replaceChildren(el('h2','Payer '+i.price+' FCFA'));
+  const s=el('select');['Orange Money','MTN MoMo','Wave'].forEach(o=>s.append(el('option',o)));
+  const b=el('button','Payer (simulation)','btn'),m=el('p','','mu');b.type='button';
+  b.onclick=()=>{m.textContent='Paiement simulé ✓ Fichier : '+i.link};
+  p.append(s,b,m);p.scrollIntoView();
+}
+function err(e){
+  const c=e&&e.code||'';
+  $('amsg').textContent=c.includes('email-already')?'Cet e-mail a déjà un compte.':
+    c.includes('weak')?'Mot de passe trop court (6 minimum).':
+    c.includes('invalid')?'E-mail ou mot de passe incorrect.':'Une erreur est survenue, réessaie.';
+}
+$('q').oninput=render;
+$('login').onclick=()=>signInWithEmailAndPassword(auth,$('em').value.trim(),$('pw').value).catch(err);
+$('signup').onclick=()=>createUserWithEmailAndPassword(auth,$('em').value.trim(),$('pw').value).catch(err);
+$('logout').onclick=()=>signOut(auth);
+onAuthStateChanged(auth,u=>{
+  user=u;$('amsg').textContent='';
+  $('out').hidden=!!u;$('in').hidden=!u;$('sell').hidden=!u;
+  if(u)$('who').textContent='Connecté : '+u.email;
+  render();
+});
+$('go').onclick=async()=>{
+  const v=k=>$(k).value.trim(),price=parseInt(v('pr'),10);
+  if(!user)return;
+  if(!v('ti')||!(price>0)){$('msg').textContent='Mets un titre et un prix.';return}
+  try{
+    await addDoc(collection(db,'products'),{title:v('ti'),desc:v('de'),price:price,seller:v('se')||'Vendeur',link:v('li')||'Lien à venir',uid:user.uid,t:Date.now()});
+    $('msg').textContent='Produit publié ✓';
+    ['ti','de','pr','se','li'].forEach(k=>$(k).value='');
+  }catch(e){$('msg').textContent='Impossible de publier pour le moment.'}
+};
+onSnapshot(query(collection(db,'products'),orderBy('t','desc')),
+  s=>{items=s.docs.map(d=>({id:d.id,...d.data()}));render()},
+  ()=>{$('list').replaceChildren(el('p','Impossible de charger les produits.','mu'))});
+render();
+</script>
+</body></html>
