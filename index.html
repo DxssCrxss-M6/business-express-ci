@@ -24,6 +24,8 @@ button.card b{font-size:16px}
 .mu{color:var(--mu);margin:0;font-size:14px}
 .strip{display:flex;gap:8px;overflow-x:auto}
 .strip img{height:200px;width:auto;border-radius:8px;flex:none}
+.safe{border:1px solid var(--or);border-radius:10px;padding:10px;font-size:14px;margin:0}
+.mod{display:flex;flex-direction:column;gap:6px;border:1px solid var(--bd);border-radius:10px;padding:8px;font-size:14px}
 [hidden]{display:none!important}
 </style></head>
 <body>
@@ -40,6 +42,8 @@ button.card b{font-size:16px}
 <section id="sellp" hidden>
 <h2>Publier une annonce</h2>
 <p class="mu" id="who"></p>
+<details><summary class="mu">Mon identifiant</summary><p class="mu" id="uidp" style="user-select:all;word-break:break-all"></p></details>
+<p class="mu">Ton annonce sera visible après validation.</p>
 <label>Photos (4 maximum)<input id="ph" type="file" accept="image/*" multiple></label>
 <div class="strip" id="pv"></div>
 <label>Titre<input id="ti" type="text" maxlength="80"></label>
@@ -55,6 +59,7 @@ button.card b{font-size:16px}
 <p class="mu" id="msg"></p>
 <button class="btn2" id="logout" type="button">Se déconnecter</button>
 </section>
+<section id="adm" hidden></section>
 <input id="q" type="text" placeholder="Rechercher une annonce…" aria-label="Rechercher">
 <div class="row"><select id="fc" aria-label="Catégorie"></select><select id="fv" aria-label="Ville"></select></div>
 <section id="detail" hidden></section>
@@ -63,7 +68,7 @@ button.card b{font-size:16px}
 <script type="module">
 import {initializeApp} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-app.js";
 import {getAuth,onAuthStateChanged,signInWithEmailAndPassword,createUserWithEmailAndPassword,signOut} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-auth.js";
-import {getFirestore,collection,addDoc,onSnapshot,query,orderBy,deleteDoc,doc} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-firestore.js";
+import {getFirestore,collection,addDoc,onSnapshot,query,where,deleteDoc,updateDoc,doc} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-firestore.js";
 const app=initializeApp({
   apiKey:"AIzaSyC4DsEYJOfILmytTRfgaPr1QymJGgp-87o",
   authDomain:"business-express-ci.firebaseapp.com",
@@ -76,7 +81,7 @@ const auth=getAuth(app),db=getFirestore(app);
 const CATS=['Téléphones','Électronique','Mode','Maison','Véhicules','Immobilier','Services','Livres & formations','Autres'];
 const CITIES=['Abidjan','Bouaké','Yamoussoukro','Daloa','San-Pédro','Korhogo','Autre'];
 const UNITS=[['','Prix fixe'],['par mois','Par mois'],['par nuit','Par nuit'],['par jour','Par jour']];
-let items=[],user=null,photos=[];
+let items=[],all=[],reps=[],adm=false,unsubs=[],user=null,photos=[];
 const $=i=>document.getElementById(i);
 const msg=t=>{$('msg').textContent=t};
 function el(t,x,c){const e=document.createElement(t);if(x!=null)e.textContent=x;if(c)e.className=c;return e}
@@ -113,12 +118,42 @@ function show(i){
     const w=el('a','WhatsApp','btn lnk');w.href='https://wa.me/'+n+'?text='+encodeURIComponent('Bonjour, je suis intéressé par ton annonce « '+i.title+' » sur Business Express CI.');w.target='_blank';w.rel='noopener';
     p.append(t,w);
   }
+  p.append(el('p','⚠️ Sécurité : vois le produit avant de payer, rencontre le vendeur dans un lieu public, et n’envoie jamais d’argent à l’avance.','safe'));
+  const rp=el('button','Signaler cette annonce','btn2');rp.type='button';
+  rp.onclick=async()=>{
+    if(!user){alert('Connecte-toi pour signaler une annonce.');return}
+    if(!confirm('Signaler cette annonce comme suspecte ?'))return;
+    try{await addDoc(collection(db,'reports'),{pid:i.id,title:i.title,uid:user.uid,t:Date.now()});alert('Merci, ton signalement est envoyé.')}
+    catch(e){alert('Impossible d’envoyer le signalement pour le moment.')}
+  };
+  p.append(rp);
   if(user&&user.uid===i.uid){
     const d=el('button','Supprimer mon annonce','btn2');d.type='button';
     d.onclick=async()=>{if(confirm('Supprimer cette annonce ?')){await deleteDoc(doc(db,'products',i.id));p.hidden=true}};
     p.append(d);
   }
   p.scrollIntoView();
+}
+function renderAdm(){
+  const a=$('adm');a.hidden=!adm;if(!adm)return;
+  a.replaceChildren(el('h2','Modération'));
+  const pend=all.filter(i=>i.ok!==true);
+  a.append(el('b','À valider ('+pend.length+')'));
+  pend.forEach(i=>{
+    const c=el('div',null,'mod');
+    c.append(pic(i,100),el('span',money(i)+' · '+i.title+' · '+(i.city||'')+' · '+(i.seller||'')+' · '+(i.phone||'')),el('span',i.desc||'','mu'));
+    const ok=el('button','Approuver','btn');ok.type='button';ok.onclick=()=>updateDoc(doc(db,'products',i.id),{ok:true});
+    const no=el('button','Supprimer','btn2');no.type='button';no.onclick=()=>{if(confirm('Supprimer cette annonce ?'))deleteDoc(doc(db,'products',i.id))};
+    c.append(ok,no);a.append(c);
+  });
+  a.append(el('b','Signalements ('+reps.length+')'));
+  reps.forEach(r=>{
+    const c=el('div',null,'mod');c.append(el('span','Signalée : '+(r.title||r.pid)));
+    const del=el('button','Supprimer l’annonce','btn');del.type='button';
+    del.onclick=async()=>{if(confirm('Supprimer cette annonce ?')){try{await deleteDoc(doc(db,'products',r.pid))}catch(e){}await deleteDoc(doc(db,'reports',r.id))}};
+    const ig=el('button','Ignorer','btn2');ig.type='button';ig.onclick=()=>deleteDoc(doc(db,'reports',r.id));
+    c.append(del,ig);a.append(c);
+  });
 }
 function err(e){
   const c=e&&e.code||'';
@@ -133,9 +168,14 @@ $('signup').onclick=()=>createUserWithEmailAndPassword(auth,$('em').value.trim()
 $('logout').onclick=()=>signOut(auth);
 onAuthStateChanged(auth,u=>{
   user=u;$('amsg').textContent='';
+  unsubs.forEach(f=>f());unsubs=[];adm=false;all=[];reps=[];renderAdm();
   $('top').textContent=u?'Vendre':'Connexion';
   $('authp').hidden=true;$('sellp').hidden=!u;
-  if(u)$('who').textContent='Connecté : '+u.email;
+  if(u){
+    $('who').textContent='Connecté : '+u.email;$('uidp').textContent=u.uid;
+    unsubs.push(onSnapshot(collection(db,'reports'),s=>{adm=true;reps=s.docs.map(d=>({id:d.id,...d.data()}));renderAdm()},()=>{}));
+    unsubs.push(onSnapshot(collection(db,'products'),s=>{all=s.docs.map(d=>({id:d.id,...d.data()}));renderAdm()},()=>{}));
+  }
   render();
 });
 $('ph').onchange=async e=>{
@@ -153,13 +193,13 @@ $('go').onclick=async()=>{
   if(!n){msg('Numéro invalide (10 chiffres, ex : 0707070707).');return}
   if(lk&&!/^https?:\/\//.test(lk)){msg('Le lien doit commencer par https://');return}
   try{
-    await addDoc(collection(db,'products'),{title:v('ti'),desc:v('de'),price:price,unit:$('un').value,cat:$('ca').value,city:$('vi').value,phone:n,seller:v('se')||'Vendeur',link:lk,photos:photos,photo:photos[0]||'',uid:user.uid,t:Date.now()});
-    msg('Annonce publiée ✓');
+    await addDoc(collection(db,'products'),{title:v('ti'),desc:v('de'),price:price,unit:$('un').value,cat:$('ca').value,city:$('vi').value,phone:n,seller:v('se')||'Vendeur',link:lk,photos:photos,photo:photos[0]||'',uid:user.uid,ok:false,t:Date.now()});
+    msg('Annonce envoyée ✓ Elle sera visible après validation.');
     ['ti','de','pr','se','tel','li'].forEach(k=>{$(k).value=''});$('ph').value='';$('pv').replaceChildren();photos=[];
   }catch(e){msg('Impossible de publier (photos trop lourdes ? essaie avec moins de photos).')}
 };
-onSnapshot(query(collection(db,'products'),orderBy('t','desc')),
-  s=>{items=s.docs.map(d=>({id:d.id,...d.data()}));render()},
+onSnapshot(query(collection(db,'products'),where('ok','==',true)),
+  s=>{items=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.t||0)-(a.t||0));render()},
   ()=>{$('list').replaceChildren(el('p','Impossible de charger les annonces.','mu'))});
 render();
 </script>
