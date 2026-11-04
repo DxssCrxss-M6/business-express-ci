@@ -22,6 +22,8 @@ section{background:var(--cd);border:1px solid var(--bd);border-radius:12px;paddi
 button.card{min-height:0;padding:8px;font-weight:400;text-align:left;background:var(--cd);border:1px solid var(--bd);display:flex;flex-direction:column;gap:4px;color:var(--tx);font-size:15px}
 button.card b{font-size:16px}
 .mu{color:var(--mu);margin:0;font-size:14px}
+.strip{display:flex;gap:8px;overflow-x:auto}
+.strip img{height:200px;width:auto;border-radius:8px;flex:none}
 [hidden]{display:none!important}
 </style></head>
 <body>
@@ -38,13 +40,15 @@ button.card b{font-size:16px}
 <section id="sellp" hidden>
 <h2>Publier une annonce</h2>
 <p class="mu" id="who"></p>
-<label>Photo<input id="ph" type="file" accept="image/*"></label>
-<div id="pv"></div>
+<label>Photos (4 maximum)<input id="ph" type="file" accept="image/*" multiple></label>
+<div class="strip" id="pv"></div>
 <label>Titre<input id="ti" type="text" maxlength="80"></label>
 <label>Catégorie<select id="ca"></select></label>
 <label>Ville<select id="vi"></select></label>
 <label>Prix (FCFA)<input id="pr" type="number" inputmode="numeric"></label>
+<label>Type de prix<select id="un"></select></label>
 <label>Description<textarea id="de" rows="3" maxlength="500"></textarea></label>
+<label>Lien (facultatif : extrait du livre, page de la résidence…)<input id="li" type="url" placeholder="https://"></label>
 <label>Ton nom<input id="se" type="text" maxlength="40"></label>
 <label>Ton numéro (WhatsApp)<input id="tel" type="tel" placeholder="0707070707"></label>
 <button class="btn" id="go" type="button">Publier mon annonce</button>
@@ -71,34 +75,43 @@ const app=initializeApp({
 const auth=getAuth(app),db=getFirestore(app);
 const CATS=['Téléphones','Électronique','Mode','Maison','Véhicules','Immobilier','Services','Livres & formations','Autres'];
 const CITIES=['Abidjan','Bouaké','Yamoussoukro','Daloa','San-Pédro','Korhogo','Autre'];
-let items=[],user=null,photo='';
+const UNITS=[['','Prix fixe'],['par mois','Par mois'],['par nuit','Par nuit'],['par jour','Par jour']];
+let items=[],user=null,photos=[];
 const $=i=>document.getElementById(i);
 const msg=t=>{$('msg').textContent=t};
 function el(t,x,c){const e=document.createElement(t);if(x!=null)e.textContent=x;if(c)e.className=c;return e}
 function opts(id,list,all){const s=$(id);if(all)s.append(new Option(all,''));list.forEach(v=>s.append(new Option(v,v)))}
 opts('fc',CATS,'Toutes les catégories');opts('fv',CITIES,'Toutes les villes');opts('ca',CATS);opts('vi',CITIES);
-const money=n=>Number(n).toLocaleString('fr-FR')+' FCFA';
+UNITS.forEach(u=>$('un').append(new Option(u[1],u[0])));
+const money=i=>Number(i.price).toLocaleString('fr-FR')+' FCFA'+(i.unit?' '+i.unit:'');
 function phone(p){let d=p.replace(/\D/g,'');if(d.startsWith('00'))d=d.slice(2);if(d.length===10)d='225'+d;return /^\d{11,13}$/.test(d)?d:null}
-function shrink(file){return new Promise((ok,ko)=>{const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{const s=Math.min(1,640/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=Math.round(im.width*s);c.height=Math.round(im.height*s);c.getContext('2d').drawImage(im,0,0,c.width,c.height);ok(c.toDataURL('image/jpeg',0.65))};im.onerror=ko;im.src=r.result};r.onerror=ko;r.readAsDataURL(file)})}
+function shrink(file){return new Promise((ok,ko)=>{const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{const s=Math.min(1,640/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=Math.round(im.width*s);c.height=Math.round(im.height*s);c.getContext('2d').drawImage(im,0,0,c.width,c.height);ok(c.toDataURL('image/jpeg',0.6))};im.onerror=ko;im.src=r.result};r.onerror=ko;r.readAsDataURL(file)})}
+function pics(i){return (Array.isArray(i.photos)&&i.photos.length?i.photos:(i.photo?[i.photo]:[])).filter(s=>String(s).startsWith('data:image/'))}
 function pic(i,h){
-  if(i.photo&&String(i.photo).startsWith('data:image/')){const m=document.createElement('img');m.src=i.photo;m.alt=i.title||'';m.style.cssText='width:100%;height:'+h+'px;object-fit:cover;border-radius:8px';return m}
+  const a=pics(i);
+  if(a.length){const m=document.createElement('img');m.src=a[0];m.alt=i.title||'';m.style.cssText='width:100%;height:'+h+'px;object-fit:cover;border-radius:8px';return m}
   const d=el('div','Pas de photo','mu');d.style.cssText='height:'+h+'px;display:flex;align-items:center;justify-content:center;background:var(--bd);border-radius:8px';return d;
 }
 function render(){
   const q=$('q').value.toLowerCase(),c=$('fc').value,v=$('fv').value,l=$('list');l.replaceChildren();
   const f=items.filter(i=>(!c||i.cat===c)&&(!v||i.city===v)&&((i.title||'')+' '+(i.desc||'')).toLowerCase().includes(q));
   if(!f.length){l.append(el('p','Aucune annonce pour l’instant.','mu'));return}
-  f.forEach(i=>{const k=el('button',null,'card');k.type='button';k.append(pic(i,120),el('b',money(i.price)),el('span',i.title),el('span',(i.city||'')+' · '+(i.cat||''),'mu'));k.onclick=()=>show(i);l.append(k)});
+  f.forEach(i=>{const k=el('button',null,'card');k.type='button';k.append(pic(i,120),el('b',money(i)),el('span',i.title),el('span',(i.city||'')+' · '+(i.cat||''),'mu'));k.onclick=()=>show(i);l.append(k)});
 }
 function show(i){
   const p=$('detail');p.hidden=false;p.replaceChildren();
   const x=el('button','Fermer','btn2');x.type='button';x.onclick=()=>{p.hidden=true};
-  p.append(x,pic(i,240),el('h2',money(i.price)),el('b',i.title),el('p',i.desc,'mu'),el('p',(i.city||'')+' · '+(i.cat||'')+' · '+(i.seller||''),'mu'));
+  p.append(x);
+  const a=pics(i);
+  if(a.length>1){const s=el('div',null,'strip');a.forEach(u=>{const m=document.createElement('img');m.src=u;m.alt=i.title||'';s.append(m)});p.append(s)}
+  else p.append(pic(i,240));
+  p.append(el('h2',money(i)),el('b',i.title),el('p',i.desc,'mu'),el('p',(i.city||'')+' · '+(i.cat||'')+' · '+(i.seller||''),'mu'));
+  if(/^https?:\/\//.test(i.link||'')){const k=el('a','Voir le lien','btn2 lnk');k.href=i.link;k.target='_blank';k.rel='noopener noreferrer';p.append(k)}
   const n=String(i.phone||'');
   if(/^\d{11,13}$/.test(n)){
-    const a=el('a','Appeler','btn lnk');a.href='tel:+'+n;
+    const t=el('a','Appeler','btn lnk');t.href='tel:+'+n;
     const w=el('a','WhatsApp','btn lnk');w.href='https://wa.me/'+n+'?text='+encodeURIComponent('Bonjour, je suis intéressé par ton annonce « '+i.title+' » sur Business Express CI.');w.target='_blank';w.rel='noopener';
-    p.append(a,w);
+    p.append(t,w);
   }
   if(user&&user.uid===i.uid){
     const d=el('button','Supprimer mon annonce','btn2');d.type='button';
@@ -126,20 +139,24 @@ onAuthStateChanged(auth,u=>{
   render();
 });
 $('ph').onchange=async e=>{
-  const f=e.target.files[0];photo='';$('pv').replaceChildren();if(!f)return;
-  try{photo=await shrink(f);const m=document.createElement('img');m.src=photo;m.style.cssText='width:100%;max-height:180px;object-fit:cover;border-radius:8px';$('pv').append(m)}
-  catch(x){msg('Photo illisible, essaie une autre.')}
+  const fl=Array.from(e.target.files);photos=[];$('pv').replaceChildren();
+  if(fl.length>4)msg('4 photos maximum : seules les 4 premières sont gardées.');
+  for(const f of fl.slice(0,4)){
+    try{const d=await shrink(f);photos.push(d);const m=document.createElement('img');m.src=d;$('pv').append(m)}
+    catch(x){msg('Une photo est illisible, essaie une autre.')}
+  }
 };
 $('go').onclick=async()=>{
-  const v=k=>$(k).value.trim(),price=parseInt(v('pr'),10),n=phone(v('tel'));
+  const v=k=>$(k).value.trim(),price=parseInt(v('pr'),10),n=phone(v('tel')),lk=v('li');
   if(!user)return;
   if(!v('ti')||!(price>0)){msg('Mets un titre et un prix.');return}
   if(!n){msg('Numéro invalide (10 chiffres, ex : 0707070707).');return}
+  if(lk&&!/^https?:\/\//.test(lk)){msg('Le lien doit commencer par https://');return}
   try{
-    await addDoc(collection(db,'products'),{title:v('ti'),desc:v('de'),price:price,cat:$('ca').value,city:$('vi').value,phone:n,seller:v('se')||'Vendeur',photo:photo,uid:user.uid,t:Date.now()});
+    await addDoc(collection(db,'products'),{title:v('ti'),desc:v('de'),price:price,unit:$('un').value,cat:$('ca').value,city:$('vi').value,phone:n,seller:v('se')||'Vendeur',link:lk,photos:photos,photo:photos[0]||'',uid:user.uid,t:Date.now()});
     msg('Annonce publiée ✓');
-    ['ti','de','pr','se','tel'].forEach(k=>{$(k).value=''});$('ph').value='';$('pv').replaceChildren();photo='';
-  }catch(e){msg('Impossible de publier pour le moment.')}
+    ['ti','de','pr','se','tel','li'].forEach(k=>{$(k).value=''});$('ph').value='';$('pv').replaceChildren();photos=[];
+  }catch(e){msg('Impossible de publier (photos trop lourdes ? essaie avec moins de photos).')}
 };
 onSnapshot(query(collection(db,'products'),orderBy('t','desc')),
   s=>{items=s.docs.map(d=>({id:d.id,...d.data()}));render()},
