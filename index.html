@@ -926,5 +926,107 @@ document.querySelector('#xnav button[data-k="acc"]').click();
 setTimeout(()=>xag.scrollIntoView(),50);
 }));
 </script><style>#xagadm:empty{display:none!important}</style>
+<style>
+/* PARAMÈTRES ZARATHOUSTRA */
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#101820;
+  --tx:#F1F5F9;
+  --mu:#AAB8C5;
+  --bd:#34495A;
+  --cd:#1B2935;
+  --nv:#243C50;
+  --hd:#FFFFFF;
+  --ac:#65BDEB;
+}
+#settingsPanel{display:none}
+body[data-tab="acc"] #settingsPanel{display:flex}
+#settingsPanel label{display:block;font-weight:600}
+</style>
+
+<script>
+(function(){
+const $=id=>document.getElementById(id);
+
+/* Nom officiel */
+document.title="Zarathoustra";
+document.querySelector("header h1").textContent="Zarathoustra";
+
+/* Nouvelles villes */
+const cities=[
+"Bonoua","Yaou","Grand-Bassam",
+"Adiaké","Assinie","Aboisso"
+];
+["vi","fv"].forEach(id=>{
+const s=$(id);
+if(s)cities.forEach(v=>{
+if(![...s.options].some(o=>o.value===v))
+s.add(new Option(v,v));
+});
+});
+
+/* Paramètres */
+const panel=document.createElement("section");
+panel.id="settingsPanel";
+panel.innerHTML=`
+<h2>Paramètres</h2>
+
+<label for="appLanguage">Langue</label>
+<select id="appLanguage">
+<option value="fr">🇫🇷 Français</option>
+<option value="en">🇬🇧 English</option>
+<option value="es">🇪🇸 Español</option>
+<option value="de">🇩🇪 Deutsch</option>
+</select>
+
+<label>Apparence</label>
+<select id="appTheme">
+<option value="light">☀️ Mode clair</option>
+<option value="dark">🌙 Mode sombre</option>
+</select>
+
+<h3>Contacter l'agence</h3>
+<p class="mu">Signaler un vendeur suspect, une annonce frauduleuse ou demander de l'aide.</p>
+<a class="lnk btn" href="https://wa.me/2250170075417?text=Bonjour%20Zarathoustra%2C%20je%20souhaite%20signaler%20un%20probl%C3%A8me.">
+Contacter sur WhatsApp
+</a>
+<a class="lnk btn2" href="mailto:businessci1213@gmail.com?subject=Signalement%20Zarathoustra">
+Envoyer un e-mail
+</a>
+<p class="mu">WhatsApp : +225 0170075417</p>
+<p class="mu">E-mail : businessci1213@gmail.com</p>
+`;
+
+$("xacc").append(panel);
+
+/* Mémorisation du thème */
+const theme=$("appTheme");
+const lang=$("appLanguage");
+
+theme.value=localStorage.getItem("zarathoustra_theme")||"light";
+lang.value=localStorage.getItem("zarathoustra_language")||"fr";
+
+function applyTheme(){
+document.documentElement.dataset.theme=theme.value;
+localStorage.setItem("zarathoustra_theme",theme.value);
+}
+theme.onchange=applyTheme;
+lang.onchange=()=>{
+localStorage.setItem("zarathoustra_language",lang.value);
+};
+applyTheme();
+
+/* Correction du nom dans les textes générés */
+const observer=new MutationObserver(()=>{
+document.querySelectorAll("header h1").forEach(e=>{
+if(e.textContent==="ZARATHOUSTRA")e.textContent="Zarathoustra";
+});
+});
+observer.observe(document.body,{childList:true,subtree:true});
+})();
+</script>
+</body>
+</html>
+
 </body>
 </html>
