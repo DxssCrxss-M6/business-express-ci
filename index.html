@@ -1,5 +1,7 @@
 <!doctype html>
-<html lang="fr"><head><meta charset="utf-8">
+<html lang="fr">
+<head>
+<meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#A8DDF7">
 <title>ZARATHOUSTRA</title>
@@ -32,7 +34,8 @@ button.card b{font-size:16px}
 .chk input{width:auto;min-height:0}
 #terms p{margin:0;font-size:14px}
 [hidden]{display:none!important}
-</style></head>
+</style>
+</head>
 <body>
 <header><h1>ZARATHOUSTRA</h1><button id="top" type="button">Connexion</button></header>
 <main>
@@ -45,6 +48,7 @@ button.card b{font-size:16px}
 <button class="btn2" id="signup" type="button">Créer un compte</button>
 <p class="mu" id="amsg"></p>
 </section>
+
 <section id="sellp" hidden>
 <h2>Publier une annonce</h2>
 <p class="mu" id="who"></p>
@@ -58,194 +62,786 @@ button.card b{font-size:16px}
 <label>Prix (FCFA)<input id="pr" type="number" inputmode="numeric"></label>
 <label>Type de prix<select id="un"></select></label>
 <label>Description<textarea id="de" rows="3" maxlength="500"></textarea></label>
-<label>Lien (facultatif : extrait du livre, page de la résidence…)<input id="li" type="url" placeholder="https://"></label>
+<label>Lien (facultatif)<input id="li" type="url" placeholder="https://"></label>
 <label>Ton nom<input id="se" type="text" maxlength="40"></label>
 <label>Ton numéro (WhatsApp)<input id="tel" type="tel" placeholder="0707070707"></label>
 <button class="btn" id="go" type="button">Publier mon annonce</button>
 <p class="mu" id="msg"></p>
 <button class="btn2" id="logout" type="button">Se déconnecter</button>
 </section>
+
 <section id="adm" hidden></section>
 <input id="q" type="text" placeholder="Rechercher une annonce…" aria-label="Rechercher">
 <div class="row"><select id="fc" aria-label="Catégorie"></select><select id="fv" aria-label="Ville"></select></div>
 <section id="detail" hidden></section>
 <div id="list"></div>
+
 <section id="terms" hidden>
 <h2>Conditions d’utilisation</h2>
 <p>1. Ce site met en relation des vendeurs et des acheteurs. Il n’est pas partie aux ventes et ne garantit ni les produits, ni les paiements, ni les personnes.</p>
-<p>2. Il est interdit de publier : des produits illégaux (armes, drogues, contrefaçons, médicaments non autorisés), de fausses annonces, des arnaques, des photos volées, des contenus sexuels, violents ou haineux.</p>
+<p>2. Il est interdit de publier des produits illégaux, de fausses annonces, des arnaques ou des contenus illicites.</p>
 <p>3. Vendeurs : tes annonces doivent être vraies, avec un numéro valide et un produit conforme à la description.</p>
 <p>4. Acheteurs : vois toujours le produit avant de payer, rencontre le vendeur dans un lieu public, et n’envoie jamais d’argent à l’avance.</p>
-<p>5. Le numéro de téléphone que tu publies est visible par tous les visiteurs.</p>
-<p>6. L’administrateur peut refuser, supprimer une annonce ou bloquer un compte sans préavis, en cas d’abus ou de signalement.</p>
+<p>5. Le numéro de téléphone est réservé aux utilisateurs connectés.</p>
+<p>6. L’administrateur peut refuser ou supprimer une annonce en cas d’abus.</p>
 <p>7. Tu peux signaler toute annonce suspecte avec le bouton « Signaler ».</p>
 <button class="btn2" id="tclose" type="button">Fermer</button>
 </section>
 <button class="btn2" id="tl" type="button">Conditions d’utilisation</button>
 </main>
+
 <script type="module">
 import {initializeApp} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-app.js";
 import {getAuth,onAuthStateChanged,signInWithEmailAndPassword,createUserWithEmailAndPassword,signOut} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-auth.js";
-import {getFirestore,collection,addDoc,setDoc,onSnapshot,query,where,deleteDoc,updateDoc,doc} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-firestore.js";
+import {getFirestore,collection,addDoc,setDoc,onSnapshot,query,where,deleteDoc,updateDoc,doc,getDoc} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-firestore.js";
+
 const app=initializeApp({
-  apiKey:"AIzaSyC4DsEYJOfILmytTRfgaPr1QymJGgp-87o",
-  authDomain:"business-express-ci.firebaseapp.com",
-  projectId:"business-express-ci",
-  storageBucket:"business-express-ci.firebasestorage.app",
-  messagingSenderId:"45446517286",
-  appId:"1:45446517286:web:1aaf5de2d58429b61e4ce7"
+apiKey:"AIzaSyC4DsEYJOfILmytTRfgaPr1QymJGgp-87o",
+authDomain:"business-express-ci.firebaseapp.com",
+projectId:"business-express-ci",
+storageBucket:"business-express-ci.firebasestorage.app",
+messagingSenderId:"45446517286",
+appId:"1:45446517286:web:1aaf5de2d58429b61e4ce7"
 });
+
 const auth=getAuth(app),db=getFirestore(app);
 const CATS=['Téléphones','Électronique','Mode','Maison','Véhicules','Immobilier','Services','Livres & formations','Autres'];
 const CITIES=['Abidjan','Bouaké','Yamoussoukro','Daloa','San-Pédro','Korhogo','Autre'];
 const UNITS=[['','Prix fixe'],['par mois','Par mois'],['par nuit','Par nuit'],['par jour','Par jour']];
+
 let items=[],all=[],reps=[],adm=false,unsubs=[],user=null,photos=[],verified=new Set(),blocked=new Set();
 const $=i=>document.getElementById(i);
 const msg=t=>{$('msg').textContent=t};
-function el(t,x,c){const e=document.createElement(t);if(x!=null)e.textContent=x;if(c)e.className=c;return e}
-function opts(id,list,all){const s=$(id);if(all)s.append(new Option(all,''));list.forEach(v=>s.append(new Option(v,v)))}
-opts('fc',CATS,'Toutes les catégories');opts('fv',CITIES,'Toutes les villes');opts('ca',CATS);opts('vi',CITIES);
+
+function el(t,x,c){
+const e=document.createElement(t);
+if(x!=null)e.textContent=x;
+if(c)e.className=c;
+return e;
+}
+
+function opts(id,list,all){
+const s=$(id);
+if(all)s.append(new Option(all,''));
+list.forEach(v=>s.append(new Option(v,v)));
+}
+
+opts('fc',CATS,'Toutes les catégories');
+opts('fv',CITIES,'Toutes les villes');
+opts('ca',CATS);
+opts('vi',CITIES);
 UNITS.forEach(u=>$('un').append(new Option(u[1],u[0])));
+
 const money=i=>Number(i.price).toLocaleString('fr-FR')+' FCFA'+(i.unit?' '+i.unit:'');
-function phone(p){let d=p.replace(/\D/g,'');if(d.startsWith('00'))d=d.slice(2);if(d.length===10)d='225'+d;return /^\d{11,13}$/.test(d)?d:null}
-function shrink(file){return new Promise((ok,ko)=>{const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{const s=Math.min(1,640/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=Math.round(im.width*s);c.height=Math.round(im.height*s);c.getContext('2d').drawImage(im,0,0,c.width,c.height);ok(c.toDataURL('image/jpeg',0.6))};im.onerror=ko;im.src=r.result};r.onerror=ko;r.readAsDataURL(file)})}
-function pics(i){return (Array.isArray(i.photos)&&i.photos.length?i.photos:(i.photo?[i.photo]:[])).filter(s=>String(s).startsWith('data:image/'))}
+
+function phone(p){
+let d=p.replace(/\D/g,'');
+if(d.startsWith('00'))d=d.slice(2);
+if(d.length===10)d='225'+d;
+return /^\d{11,13}$/.test(d)?d:null;
+}
+
+function shrink(file){
+return new Promise((ok,ko)=>{
+const r=new FileReader();
+r.onload=()=>{
+const im=new Image();
+im.onload=()=>{
+const s=Math.min(1,640/Math.max(im.width,im.height));
+const c=document.createElement('canvas');
+c.width=Math.round(im.width*s);
+c.height=Math.round(im.height*s);
+c.getContext('2d').drawImage(im,0,0,c.width,c.height);
+ok(c.toDataURL('image/jpeg',0.6));
+};
+im.onerror=ko;im.src=r.result;
+};
+r.onerror=ko;r.readAsDataURL(file);
+});
+}
+
+function pics(i){
+return (Array.isArray(i.photos)&&i.photos.length?i.photos:(i.photo?[i.photo]:[]))
+.filter(s=>String(s).startsWith('data:image/'));
+}
+
 function pic(i,h){
-  const a=pics(i);
-  if(a.length){const m=document.createElement('img');m.src=a[0];m.alt=i.title||'';m.style.cssText='width:100%;height:'+h+'px;object-fit:cover;border-radius:8px';return m}
-  const d=el('div','Pas de photo','mu');d.style.cssText='height:'+h+'px;display:flex;align-items:center;justify-content:center;background:var(--bd);border-radius:8px';return d;
-}
 function render(){
-  const q=$('q').value.toLowerCase(),c=$('fc').value,v=$('fv').value,l=$('list');l.replaceChildren();
-  const f=items.filter(i=>(!c||i.cat===c)&&(!v||i.city===v)&&((i.title||'')+' '+(i.desc||'')).toLowerCase().includes(q));
-  if(!f.length){l.append(el('p','Aucune annonce pour l’instant.','mu'));return}
-  f.forEach(i=>{
-    const k=el('button',null,'card');k.type='button';
-    k.append(pic(i,120),el('b',money(i)),el('span',i.title),el('span',(i.city||'')+' · '+(i.cat||''),'mu'));
-    if(verified.has(i.uid))k.append(el('span','✓ Vendeur vérifié','ok'));
-    k.onclick=()=>show(i);l.append(k);
-  });
+const q=$('q').value.toLowerCase(),c=$('fc').value,v=$('fv').value,l=$('list');
+l.replaceChildren();
+
+const f=items.filter(i=>(!c||i.cat===c)&&(!v||i.city===v)&&((i.title||'')+' '+(i.desc||'')).toLowerCase().includes(q));
+
+if(!f.length){
+l.append(el('p','Aucune annonce pour l’instant.','mu'));
+return;
 }
+
+f.forEach(i=>{
+const k=el('button',null,'card');
+k.type='button';
+k.append(pic(i,120),el('b',money(i)),el('span',i.title),el('span',(i.city||'')+' · '+(i.cat||''),'mu'));
+if(verified.has(i.uid))k.append(el('span','✓ Vendeur vérifié','ok'));
+k.onclick=()=>show(i);
+l.append(k);
+});
+}
+
 function show(i){
-  const p=$('detail');p.hidden=false;p.replaceChildren();
-  const x=el('button','Fermer','btn2');x.type='button';x.onclick=()=>{p.hidden=true};
-  p.append(x);
-  const a=pics(i);
-  if(a.length>1){const s=el('div',null,'strip');a.forEach(u=>{const m=document.createElement('img');m.src=u;m.alt=i.title||'';s.append(m)});p.append(s)}
-  else p.append(pic(i,240));
-  p.append(el('h2',money(i)),el('b',i.title),el('p',i.desc,'mu'),el('p',(i.city||'')+' · '+(i.cat||'')+' · '+(i.seller||''),'mu'));
-  if(verified.has(i.uid))p.append(el('p','✓ Vendeur vérifié','ok'));
-  if(/^https?:\/\//.test(i.link||'')){const k=el('a','Voir le lien','btn2 lnk');k.href=i.link;k.target='_blank';k.rel='noopener noreferrer';p.append(k)}
-  const n=String(i.phone||'');
-  if(/^\d{11,13}$/.test(n)){
-    const t=el('a','Appeler','btn lnk');t.href='tel:+'+n;
-    const w=el('a','WhatsApp','btn lnk');w.href='https://wa.me/'+n+'?text='+encodeURIComponent('Bonjour, je suis intéressé par ton annonce « '+i.title+' » sur ZARATHOUSTRA.');w.target='_blank';w.rel='noopener';
-    p.append(t,w);
-  }
-  p.append(el('p','⚠️ Sécurité : vois le produit avant de payer, rencontre le vendeur dans un lieu public, et n’envoie jamais d’argent à l’avance.','safe'));
-  const rp=el('button','Signaler cette annonce','btn2');rp.type='button';
-  rp.onclick=async()=>{
-    if(!user){alert('Connecte-toi pour signaler une annonce.');return}
-    if(!confirm('Signaler cette annonce comme suspecte ?'))return;
-    try{await addDoc(collection(db,'reports'),{pid:i.id,title:i.title,uid:user.uid,t:Date.now()});alert('Merci, ton signalement est envoyé.')}
-    catch(e){alert('Impossible d’envoyer le signalement pour le moment.')}
-  };
-  p.append(rp);
-  if(user&&user.uid===i.uid){
-    const d=el('button','Supprimer mon annonce','btn2');d.type='button';
-    d.onclick=async()=>{if(confirm('Supprimer cette annonce ?')){await deleteDoc(doc(db,'products',i.id));p.hidden=true}};
-    p.append(d);
-  }
-  p.scrollIntoView();
+const p=$('detail');
+p.hidden=false;
+p.replaceChildren();
+
+const x=el('button','Fermer','btn2');
+x.type='button';
+x.onclick=()=>p.hidden=true;
+p.append(x);
+
+const a=pics(i);
+if(a.length>1){
+const s=el('div',null,'strip');
+a.forEach(u=>{
+const m=document.createElement('img');
+m.src=u;m.alt=i.title||'';
+s.append(m);
+});
+p.append(s);
+}else p.append(pic(i,240));
+
+p.append(
+el('h2',money(i)),
+el('b',i.title),
+el('p',i.desc,'mu'),
+el('p',(i.city||'')+' · '+(i.cat||'')+' · '+(i.seller||''),'mu')
+);
+
+if(verified.has(i.uid))p.append(el('p','✓ Vendeur vérifié','ok'));
+
+if(/^https?:\/\//.test(i.link||'')){
+const k=el('a','Voir le lien','btn2 lnk');
+k.href=i.link;k.target='_blank';k.rel='noopener noreferrer';
+p.append(k);
 }
+
+const contactBtn=el('button','Voir le numéro du vendeur','btn');
+contactBtn.type='button';
+
+contactBtn.onclick=async()=>{
+if(!user){
+alert('Connecte-toi pour voir le numéro du vendeur.');
+$('authp').hidden=false;
+$('authp').scrollIntoView();
+return;
+}
+
+try{
+const contact=await getDoc(doc(db,'productContacts',i.id));
+
+if(!contact.exists()){
+alert('Numéro indisponible.');
+return;
+}
+
+const n=String(contact.data().phone||'');
+if(!/^\d{11,13}$/.test(n)){
+alert('Numéro invalide.');
+return;
+}
+
+const call=el('a','Appeler','btn lnk');
+call.href='tel:+'+n;
+
+const wa=el('a','WhatsApp','btn lnk');
+wa.href='https://wa.me/'+n+'?text='+encodeURIComponent('Bonjour, je suis intéressé par ton annonce « '+i.title+' » sur ZARATHOUSTRA.');
+wa.target='_blank';
+wa.rel='noopener noreferrer';
+
+contactBtn.replaceWith(call,wa);
+}catch(e){
+alert('Impossible de récupérer le numéro. Vérifie ta connexion.');
+}
+};
+
+p.append(contactBtn);
+
+p.append(el('p','⚠️ Sécurité : vois le produit avant de payer, rencontre le vendeur dans un lieu public, et n’envoie jamais d’argent à l’avance.','safe'));
+
+const rp=el('button','Signaler cette annonce','btn2');
+rp.type='button';
+
+rp.onclick=async()=>{
+if(!user){alert('Connecte-toi pour signaler une annonce.');return}
+if(!confirm('Signaler cette annonce comme suspecte ?'))return;
+
+try{
+await addDoc(collection(db,'reports'),{pid:i.id,title:i.title,uid:user.uid,t:Date.now()});
+alert('Merci, ton signalement est envoyé.');
+}catch(e){
+alert('Impossible d’envoyer le signalement pour le moment.');
+}
+};
+p.append(rp);
+
+if(user&&user.uid===i.uid){
+const d=el('button','Supprimer mon annonce','btn2');
+d.type='button';
+d.onclick=async()=>{
+if(confirm('Supprimer cette annonce ?')){
+await deleteDoc(doc(db,'products',i.id));
+await deleteDoc(doc(db,'productContacts',i.id));
+p.hidden=true;
+}
+};
+p.append(d);
+}
+
+p.scrollIntoView();
+}
+
 function renderAdm(){
-  const a=$('adm');a.hidden=!adm;if(!adm)return;
-  a.replaceChildren(el('h2','Modération'));
-  const pend=all.filter(i=>i.ok!==true);
-  a.append(el('b','À valider ('+pend.length+')'));
-  pend.forEach(i=>{
-    const c=el('div',null,'mod');
-    c.append(pic(i,100),el('span',money(i)+' · '+i.title+' · '+(i.city||'')+' · '+(i.seller||'')+' · '+(i.phone||'')),el('span',i.desc||'','mu'));
-    const ok=el('button','Approuver','btn');ok.type='button';ok.onclick=()=>updateDoc(doc(db,'products',i.id),{ok:true});
-    const no=el('button','Supprimer','btn2');no.type='button';no.onclick=()=>{if(confirm('Supprimer cette annonce ?'))deleteDoc(doc(db,'products',i.id))};
-    c.append(ok,no);a.append(c);
-  });
-  a.append(el('b','Signalements ('+reps.length+')'));
-  reps.forEach(r=>{
-    const c=el('div',null,'mod');c.append(el('span','Signalée : '+(r.title||r.pid)));
-    const del=el('button','Supprimer l’annonce','btn');del.type='button';
-    del.onclick=async()=>{if(confirm('Supprimer cette annonce ?')){try{await deleteDoc(doc(db,'products',r.pid))}catch(e){}await deleteDoc(doc(db,'reports',r.id))}};
-    const ig=el('button','Ignorer','btn2');ig.type='button';ig.onclick=()=>deleteDoc(doc(db,'reports',r.id));
-    c.append(del,ig);a.append(c);
-  });
-  const sel=new Map();
-  all.forEach(i=>{if(!i.uid)return;const s=sel.get(i.uid)||{uid:i.uid,name:i.seller,phone:i.phone,n:0};s.n++;sel.set(i.uid,s)});
-  a.append(el('b','Vendeurs ('+sel.size+')'));
-  sel.forEach(s=>{
-    const c=el('div',null,'mod');
-    c.append(el('span',(s.name||'?')+' · '+(s.phone||'')+' · '+s.n+' annonce(s)'+(verified.has(s.uid)?' · ✓ vérifié':'')+(blocked.has(s.uid)?' · BLOQUÉ':'')));
-    const v=el('button',verified.has(s.uid)?'Retirer le badge':'Vérifier ce vendeur','btn');v.type='button';
-    v.onclick=()=>verified.has(s.uid)?deleteDoc(doc(db,'verified',s.uid)):setDoc(doc(db,'verified',s.uid),{t:Date.now()});
-    const b=el('button',blocked.has(s.uid)?'Débloquer':'Bloquer cet utilisateur','btn2');b.type='button';
-    b.onclick=()=>{if(blocked.has(s.uid))deleteDoc(doc(db,'blocked',s.uid));else if(confirm('Bloquer cet utilisateur ?'))setDoc(doc(db,'blocked',s.uid),{t:Date.now()})};
-    c.append(v,b);a.append(c);
-  });
+const a=$('adm');
+a.hidden=!adm;
+if(!adm)return;
+
+a.replaceChildren(el('h2','Modération'));
+const pend=all.filter(i=>i.ok!==true);
+a.append(el('b','À valider ('+pend.length+')'));
+
+pend.forEach(i=>{
+const c=el('div',null,'mod');
+c.append(pic(i,100),el('span',money(i)+' · '+i.title+' · '+(i.city||'')+' · '+(i.seller||'')),el('span',i.desc||'','mu'));
+
+const ok=el('button','Approuver','btn');
+ok.type='button';
+ok.onclick=()=>updateDoc(doc(db,'products',i.id),{ok:true});
+
+const no=el('button','Supprimer','btn2');
+no.type='button';
+no.onclick=async()=>{
+if(confirm('Supprimer cette annonce ?')){
+await deleteDoc(doc(db,'products',i.id));
+await deleteDoc(doc(db,'productContacts',i.id));
 }
+};
+c.append(ok,no);
+a.append(c);
+});
+
+a.append(el('b','Signalements ('+reps.length+')'));
+
+reps.forEach(r=>{
+const c=el('div',null,'mod');
+c.append(el('span','Signalée : '+(r.title||r.pid)));
+
+const del=el('button','Supprimer l’annonce','btn');
+del.type='button';
+del.onclick=async()=>{
+if(confirm('Supprimer cette annonce ?')){
+await deleteDoc(doc(db,'products',r.pid));
+await deleteDoc(doc(db,'productContacts',r.pid));
+await deleteDoc(doc(db,'reports',r.id));
+}
+};
+
+const ig=el('button','Ignorer','btn2');
+ig.type='button';
+ig.onclick=()=>deleteDoc(doc(db,'reports',r.id));
+
+c.append(del,ig);
+a.append(c);
+});
+
+const sel=new Map();
+all.forEach(i=>{
+if(!i.uid)return;
+const s=sel.get(i.uid)||{uid:i.uid,name:i.seller,n:0};
+s.n++;sel.set(i.uid,s);
+});
+
+a.append(el('b','Vendeurs ('+sel.size+')'));
+
+sel.forEach(s=>{
+const c=el('div',null,'mod');
+c.append(el('span',(s.name||'?')+' · '+s.n+' annonce(s)'+(verified.has(s.uid)?' · ✓ vérifié':'')+(blocked.has(s.uid)?' · BLOQUÉ':'')));
+
+const v=el('button',verified.has(s.uid)?'Retirer le badge':'Vérifier ce vendeur','btn');
+v.type='button';
+v.onclick=()=>verified.has(s.uid)?deleteDoc(doc(db,'verified',s.uid)):setDoc(doc(db,'verified',s.uid),{t:Date.now()});
+
+const b=el('button',blocked.has(s.uid)?'Débloquer':'Bloquer cet utilisateur','btn2');
+b.type='button';
+b.onclick=()=>blocked.has(s.uid)?deleteDoc(doc(db,'blocked',s.uid)):confirm('Bloquer cet utilisateur ?')&&setDoc(doc(db,'blocked',s.uid),{t:Date.now()});
+
+c.append(v,b);
+a.append(c);
+});
+}
+
 function err(e){
-  const c=e&&e.code||'';
-  $('amsg').textContent=c.includes('email-already')?'Cet e-mail a déjà un compte.':
-    c.includes('weak')?'Mot de passe trop court (6 minimum).':
-    c.includes('invalid')?'E-mail ou mot de passe incorrect.':'Une erreur est survenue, réessaie.';
+const c=e&&e.code||'';
+$('amsg').textContent=c.includes('email-already')?'Cet e-mail a déjà un compte.':
+c.includes('weak')?'Mot de passe trop court (6 minimum).':
+c.includes('invalid')?'E-mail ou mot de passe incorrect.':
+'Une erreur est survenue, réessaie.';
 }
+
+const a=pics(i);
+if(a.length){
+const m=document.createElement('img');
+m.src=a[0];m.alt=i.title||'';
+m.style.cssText='width:100%;height:'+h+'px;object-fit:cover;border-radius:8px';
+return m;
+}
+const d=el('div','Pas de photo','mu');
+d.style.cssText='height:'+h+'px;display:flex;align-items:center;justify-content:center;background:var(--bd);border-radius:8px';
+return d;
+}
+</script>
+</body>
+</html>
 ['q','fc','fv'].forEach(k=>{$(k).oninput=render});
-$('top').onclick=()=>{if(user){$('sellp').hidden=!$('sellp').hidden}else{$('authp').hidden=!$('authp').hidden}};
+
+$('top').onclick=()=>{
+if(user){
+$('sellp').hidden=!$('sellp').hidden;
+}else{
+$('authp').hidden=!$('authp').hidden;
+}
+};
+
 $('tl').onclick=()=>{$('terms').hidden=false;$('terms').scrollIntoView()};
 $('tclose').onclick=()=>{$('terms').hidden=true};
+
 $('login').onclick=()=>signInWithEmailAndPassword(auth,$('em').value.trim(),$('pw').value).catch(err);
+
 $('signup').onclick=()=>{
-  if(!$('cg').checked){$('amsg').textContent='Accepte les conditions d’utilisation pour créer un compte.';return}
-  createUserWithEmailAndPassword(auth,$('em').value.trim(),$('pw').value).catch(err);
+if(!$('cg').checked){
+$('amsg').textContent='Accepte les conditions d’utilisation pour créer un compte.';
+return;
+}
+createUserWithEmailAndPassword(auth,$('em').value.trim(),$('pw').value).catch(err);
 };
+
 $('logout').onclick=()=>signOut(auth);
+
 onAuthStateChanged(auth,u=>{
-  user=u;$('amsg').textContent='';
-  unsubs.forEach(f=>f());unsubs=[];adm=false;all=[];reps=[];blocked=new Set();renderAdm();
-  $('top').textContent=u?'Vendre':'Connexion';
-  $('authp').hidden=true;$('sellp').hidden=!u;
-  if(u){
-    $('who').textContent='Connecté : '+u.email;$('uidp').textContent=u.uid;
-    unsubs.push(onSnapshot(collection(db,'reports'),s=>{adm=true;reps=s.docs.map(d=>({id:d.id,...d.data()}));renderAdm()},()=>{}));
-    unsubs.push(onSnapshot(collection(db,'products'),s=>{all=s.docs.map(d=>({id:d.id,...d.data()}));renderAdm()},()=>{}));
-    unsubs.push(onSnapshot(collection(db,'blocked'),s=>{blocked=new Set(s.docs.map(d=>d.id));renderAdm()},()=>{}));
-  }
-  render();
-});
-$('ph').onchange=async e=>{
-  const fl=Array.from(e.target.files);photos=[];$('pv').replaceChildren();
-  if(fl.length>4)msg('4 photos maximum : seules les 4 premières sont gardées.');
-  for(const f of fl.slice(0,4)){
-    try{const d=await shrink(f);photos.push(d);const m=document.createElement('img');m.src=d;$('pv').append(m)}
-    catch(x){msg('Une photo est illisible, essaie une autre.')}
-  }
-};
-$('go').onclick=async()=>{
-  const v=k=>$(k).value.trim(),price=parseInt(v('pr'),10),n=phone(v('tel')),lk=v('li');
-  if(!user)return;
-  if(!v('ti')||!(price>0)){msg('Mets un titre et un prix.');return}
-  if(!n){msg('Numéro invalide (10 chiffres, ex : 0707070707).');return}
-  if(lk&&!/^https?:\/\//.test(lk)){msg('Le lien doit commencer par https://');return}
-  try{
-    await addDoc(collection(db,'products'),{title:v('ti'),desc:v('de'),price:price,unit:$('un').value,cat:$('ca').value,city:$('vi').value,phone:n,seller:v('se')||'Vendeur',link:lk,photos:photos,photo:photos[0]||'',uid:user.uid,ok:false,t:Date.now()});
-    msg('Annonce envoyée ✓ Elle sera visible après validation.');
-    ['ti','de','pr','se','tel','li'].forEach(k=>{$(k).value=''});$('ph').value='';$('pv').replaceChildren();photos=[];
-  }catch(e){
-    msg(e&&e.code==='permission-denied'?'Ton compte ne peut pas publier. Contacte l’administrateur.':'Impossible de publier (photos trop lourdes ? essaie avec moins de photos).');
-  }
-};
-onSnapshot(collection(db,'verified'),s=>{verified=new Set(s.docs.map(d=>d.id));render();renderAdm()},()=>{});
-onSnapshot(query(collection(db,'products'),where('ok','==',true)),
-  s=>{items=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.t||0)-(a.t||0));render()},
-  ()=>{$('list').replaceChildren(el('p','Impossible de charger les annonces.','mu'))});
+user=u;
+$('amsg').textContent='';
+unsubs.forEach(f=>f());
+unsubs=[];
+adm=false;
+all=[];
+reps=[];
+blocked=new Set();
+renderAdm();
+
+$('top').textContent=u?'Vendre':'Connexion';
+$('authp').hidden=true;
+$('sellp').hidden=!u;
+
+if(u){
+$('who').textContent='Connecté : '+u.email;
+$('uidp').textContent=u.uid;
+
+unsubs.push(onSnapshot(collection(db,'reports'),s=>{
+adm=true;
+reps=s.docs.map(d=>({id:d.id,...d.data()}));
+renderAdm();
+},()=>{}));
+
+unsubs.push(onSnapshot(collection(db,'products'),s=>{
+all=s.docs.map(d=>({id:d.id,...d.data()}));
+renderAdm();
+},()=>{}));
+
+unsubs.push(onSnapshot(collection(db,'blocked'),s=>{
+blocked=new Set(s.docs.map(d=>d.id));
+renderAdm();
+},()=>{}));
+}
 render();
+});
+
+$('ph').onchange=async e=>{
+const fl=Array.from(e.target.files);
+photos=[];
+$('pv').replaceChildren();
+
+if(fl.length>4)msg('4 photos maximum : seules les 4 premières sont gardées.');
+
+for(const f of fl.slice(0,4)){
+try{
+const d=await shrink(f);
+photos.push(d);
+const m=document.createElement('img');
+m.src=d;
+$('pv').append(m);
+}catch(x){
+msg('Une photo est illisible, essaie une autre.');
+}
+}
+};
+
+$('go').onclick=async()=>{
+const v=k=>$(k).value.trim();
+const price=parseInt(v('pr'),10);
+const n=phone(v('tel'));
+const lk=v('li');
+
+if(!user)return;
+if(!v('ti')||!(price>0)){msg('Mets un titre et un prix.');return}
+if(!n){msg('Numéro invalide (10 chiffres, ex : 0707070707).');return}
+if(lk&&!/^https?:\/\//.test(lk)){msg('Le lien doit commencer par https://');return}
+
+try{
+const annonce=await addDoc(collection(db,'products'),{
+title:v('ti'),
+desc:v('de'),
+price:price,
+unit:$('un').value,
+cat:$('ca').value,
+city:$('vi').value,
+seller:v('se')||'Vendeur',
+link:lk,
+photos:photos,
+photo:photos[0]||'',
+uid:user.uid,
+ok:false,
+t:Date.now()
+});
+
+await setDoc(doc(db,'productContacts',annonce.id),{
+phone:n,
+uid:user.uid
+});
+
+msg('Annonce envoyée ✓ Elle sera visible après validation.');
+
+['ti','de','pr','se','tel','li'].forEach(k=>{$(k).value=''});
+$('ph').value='';
+$('pv').replaceChildren();
+photos=[];
+
+}catch(e){
+msg(e&&e.code==='permission-denied'?'Ton compte ne peut pas publier. Contacte l’administrateur.':'Impossible de publier (photos trop lourdes ? essaie avec moins de photos).');
+}
+};
+
+onSnapshot(collection(db,'verified'),s=>{
+verified=new Set(s.docs.map(d=>d.id));
+render();
+renderAdm();
+},()=>{});
+
+onSnapshot(query(collection(db,'products'),where('ok','==',true)),
+s=>{
+items=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.t||0)-(a.t||0));
+render();
+},
+()=>{
+$('list').replaceChildren(el('p','Impossible de charger les annonces.','mu'));
+});
+
+render();
+
 </script>
-</body></html>
+</body>
+</html>
+
+
+['q','fc','fv'].forEach(k=>{$(k).oninput=render});
+
+$('top').onclick=()=>{
+if(user){
+$('sellp').hidden=!$('sellp').hidden;
+}else{
+$('authp').hidden=!$('authp').hidden;
+}
+};
+
+$('tl').onclick=()=>{$('terms').hidden=false;$('terms').scrollIntoView()};
+$('tclose').onclick=()=>{$('terms').hidden=true};
+
+$('login').onclick=()=>signInWithEmailAndPassword(auth,$('em').value.trim(),$('pw').value).catch(err);
+
+$('signup').onclick=()=>{
+if(!$('cg').checked){
+$('amsg').textContent='Accepte les conditions d’utilisation pour créer un compte.';
+return;
+}
+createUserWithEmailAndPassword(auth,$('em').value.trim(),$('pw').value).catch(err);
+};
+
+$('logout').onclick=()=>signOut(auth);
+
+onAuthStateChanged(auth,u=>{
+user=u;
+$('amsg').textContent='';
+unsubs.forEach(f=>f());
+unsubs=[];
+adm=false;
+all=[];
+reps=[];
+blocked=new Set();
+renderAdm();
+
+$('top').textContent=u?'Vendre':'Connexion';
+$('authp').hidden=true;
+$('sellp').hidden=!u;
+
+if(u){
+$('who').textContent='Connecté : '+u.email;
+$('uidp').textContent=u.uid;
+
+unsubs.push(onSnapshot(collection(db,'reports'),s=>{
+adm=true;
+reps=s.docs.map(d=>({id:d.id,...d.data()}));
+renderAdm();
+},()=>{}));
+
+unsubs.push(onSnapshot(collection(db,'products'),s=>{
+all=s.docs.map(d=>({id:d.id,...d.data()}));
+renderAdm();
+},()=>{}));
+
+unsubs.push(onSnapshot(collection(db,'blocked'),s=>{
+blocked=new Set(s.docs.map(d=>d.id));
+renderAdm();
+},()=>{}));
+}
+render();
+});
+
+$('ph').onchange=async e=>{
+const fl=Array.from(e.target.files);
+photos=[];
+$('pv').replaceChildren();
+
+if(fl.length>4)msg('4 photos maximum : seules les 4 premières sont gardées.');
+
+for(const f of fl.slice(0,4)){
+try{
+const d=await shrink(f);
+photos.push(d);
+const m=document.createElement('img');
+m.src=d;
+$('pv').append(m);
+}catch(x){
+msg('Une photo est illisible, essaie une autre.');
+}
+}
+};
+
+$('go').onclick=async()=>{
+const v=k=>$(k).value.trim();
+const price=parseInt(v('pr'),10);
+const n=phone(v('tel'));
+const lk=v('li');
+
+if(!user)return;
+if(!v('ti')||!(price>0)){msg('Mets un titre et un prix.');return}
+if(!n){msg('Numéro invalide (10 chiffres, ex : 0707070707).');return}
+if(lk&&!/^https?:\/\//.test(lk)){msg('Le lien doit commencer par https://');return}
+
+try{
+const annonce=await addDoc(collection(db,'products'),{
+title:v('ti'),
+desc:v('de'),
+price:price,
+unit:$('un').value,
+cat:$('ca').value,
+city:$('vi').value,
+seller:v('se')||'Vendeur',
+link:lk,
+photos:photos,
+photo:photos[0]||'',
+uid:user.uid,
+ok:false,
+t:Date.now()
+});
+
+await setDoc(doc(db,'productContacts',annonce.id),{
+phone:n,
+uid:user.uid
+});
+
+msg('Annonce envoyée ✓ Elle sera visible après validation.');
+
+['ti','de','pr','se','tel','li'].forEach(k=>{$(k).value=''});
+$('ph').value='';
+$('pv').replaceChildren();
+photos=[];
+
+}catch(e){
+msg(e&&e.code==='permission-denied'?'Ton compte ne peut pas publier. Contacte l’administrateur.':'Impossible de publier (photos trop lourdes ? essaie avec moins de photos).');
+}
+};
+
+onSnapshot(collection(db,'verified'),s=>{
+verified=new Set(s.docs.map(d=>d.id));
+render();
+renderAdm();
+},()=>{});
+
+onSnapshot(query(collection(db,'products'),where('ok','==',true)),
+s=>{
+items=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.t||0)-(a.t||0));
+render();
+},
+()=>{
+$('list').replaceChildren(el('p','Impossible de charger les annonces.','mu'));
+});
+
+render();
+
+</script>
+</body>
+</html>
+['q','fc','fv'].forEach(k=>{$(k).oninput=render});
+
+$('top').onclick=()=>{
+if(user){
+$('sellp').hidden=!$('sellp').hidden;
+}else{
+$('authp').hidden=!$('authp').hidden;
+}
+};
+
+$('tl').onclick=()=>{$('terms').hidden=false;$('terms').scrollIntoView()};
+$('tclose').onclick=()=>{$('terms').hidden=true};
+
+$('login').onclick=()=>signInWithEmailAndPassword(auth,$('em').value.trim(),$('pw').value).catch(err);
+
+$('signup').onclick=()=>{
+if(!$('cg').checked){
+$('amsg').textContent='Accepte les conditions d’utilisation pour créer un compte.';
+return;
+}
+createUserWithEmailAndPassword(auth,$('em').value.trim(),$('pw').value).catch(err);
+};
+
+$('logout').onclick=()=>signOut(auth);
+
+onAuthStateChanged(auth,u=>{
+user=u;
+$('amsg').textContent='';
+unsubs.forEach(f=>f());
+unsubs=[];
+adm=false;
+all=[];
+reps=[];
+blocked=new Set();
+renderAdm();
+
+$('top').textContent=u?'Vendre':'Connexion';
+$('authp').hidden=true;
+$('sellp').hidden=!u;
+
+if(u){
+$('who').textContent='Connecté : '+u.email;
+$('uidp').textContent=u.uid;
+
+unsubs.push(onSnapshot(collection(db,'reports'),s=>{
+adm=true;
+reps=s.docs.map(d=>({id:d.id,...d.data()}));
+renderAdm();
+},()=>{}));
+
+unsubs.push(onSnapshot(collection(db,'products'),s=>{
+all=s.docs.map(d=>({id:d.id,...d.data()}));
+renderAdm();
+},()=>{}));
+
+unsubs.push(onSnapshot(collection(db,'blocked'),s=>{
+blocked=new Set(s.docs.map(d=>d.id));
+renderAdm();
+},()=>{}));
+}
+render();
+});
+
+$('ph').onchange=async e=>{
+const fl=Array.from(e.target.files);
+photos=[];
+$('pv').replaceChildren();
+
+if(fl.length>4)msg('4 photos maximum : seules les 4 premières sont gardées.');
+
+for(const f of fl.slice(0,4)){
+try{
+const d=await shrink(f);
+photos.push(d);
+const m=document.createElement('img');
+m.src=d;
+$('pv').append(m);
+}catch(x){
+msg('Une photo est illisible, essaie une autre.');
+}
+}
+};
+
+$('go').onclick=async()=>{
+const v=k=>$(k).value.trim();
+const price=parseInt(v('pr'),10);
+const n=phone(v('tel'));
+const lk=v('li');
+
+if(!user)return;
+if(!v('ti')||!(price>0)){msg('Mets un titre et un prix.');return}
+if(!n){msg('Numéro invalide (10 chiffres, ex : 0707070707).');return}
+if(lk&&!/^https?:\/\//.test(lk)){msg('Le lien doit commencer par https://');return}
+
+try{
+const annonce=await addDoc(collection(db,'products'),{
+title:v('ti'),
+desc:v('de'),
+price:price,
+unit:$('un').value,
+cat:$('ca').value,
+city:$('vi').value,
+seller:v('se')||'Vendeur',
+link:lk,
+photos:photos,
+photo:photos[0]||'',
+uid:user.uid,
+ok:false,
+t:Date.now()
+});
+
+await setDoc(doc(db,'productContacts',annonce.id),{
+phone:n,
+uid:user.uid
+});
+
+msg('Annonce envoyée ✓ Elle sera visible après validation.');
+
+['ti','de','pr','se','tel','li'].forEach(k=>{$(k).value=''});
+$('ph').value='';
+$('pv').replaceChildren();
+photos=[];
+
+}catch(e){
+msg(e&&e.code==='permission-denied'?'Ton compte ne peut pas publier. Contacte l’administrateur.':'Impossible de publier (photos trop lourdes ? essaie avec moins de photos).');
+}
+};
+
+onSnapshot(collection(db,'verified'),s=>{
+verified=new Set(s.docs.map(d=>d.id));
+render();
+renderAdm();
+},()=>{});
+
+onSnapshot(query(collection(db,'products'),where('ok','==',true)),
+s=>{
+items=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.t||0)-(a.t||0));
+render();
+},
+()=>{
+$('list').replaceChildren(el('p','Impossible de charger les annonces.','mu'));
+});
+
+render();
+
+</script>
+</body>
+</html>
