@@ -1113,6 +1113,7 @@ de:{
 /* Texte français -> traduction */
 const original=new WeakMap();
 const originalAttrs=new WeakMap();
+const originalAttrs=new WeakMap();
 let current="fr";
 
 function translateNode(node){
@@ -1132,11 +1133,11 @@ else if(node.nodeType===Node.ELEMENT_NODE){
  ["placeholder","aria-label","title"].forEach(attr=>{
   if(node.hasAttribute(attr)){
    const key="attr_"+attr;
-   if(!original.has(node[key]))original.set(node[key],node.getAttribute(attr));
-   const source=original.get(node[key]);
-   node.setAttribute(attr,(D[current]||{})[source]||source);
-  }
- });
+if(!originalAttrs.has(node[key]))originalAttrs.set(node[key],node.getAttribute(attr));
+const source=originalAttrs.get(node[key]);
+node.setAttribute(attr,(D[current]||{})[source]||source);
+}
+});
  node.childNodes.forEach(translateNode);
 }
 }
