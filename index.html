@@ -449,7 +449,7 @@ renderAdm();
 $('top').textContent=u?'Vendre':'Connexion';
 $('authp').hidden=true;$('sellp').hidden=!u;$('salesPanel').hidden=!u;
 if(u){
-$('who').textContent='Connecté : '+u.email;$('uidp').textContent=u.uid;
+$('who').textContent='Compte connecté ✓';$('uidp').textContent=u.uid;
 unsubs.push(onSnapshot(query(collection(db,'sales'),where('buyerUid','==',u.uid)),s=>{
 buyerSales=s.docs.map(d=>({id:d.id,...d.data()}));mergeSales();
 },()=>{}));
@@ -649,18 +649,34 @@ items=s.docs.map(d=>({id:d.id,...d.data()}));
 if(tab==='fav')renderFav();
 },()=>{});
 
+
 /* Messages */
 async function startChat(i){
-if(!user){alert('Connecte-toi pour envoyer un message.');go('acc');return;}
+if(!user){
+alert('Connecte-toi pour envoyer un message.');
+go('acc');
+return;
+}
+
 const cid=i.id+'_'+user.uid;
+
 try{
 await setDoc(doc(db,'chats',cid),{
-productId:i.id,title:i.title,buyerUid:user.uid,sellerUid:i.uid,t:Date.now()
+productId:i.id,
+title:i.title,
+buyerUid:user.uid,
+sellerUid:i.uid,
+t:Date.now()
 },{merge:true});
-}catch(e){alert('Impossible d’ouvrir la conversation.');return;}
+}catch(e){
+alert('Impossible d’ouvrir la conversation.');
+return;
+}
+
 thread={id:cid,title:i.title,buyerUid:user.uid,sellerUid:i.uid};
 go('msg');
 }
+
 
 function renderMsg(){
 if(unsubThread){unsubThread();unsubThread=null;}
@@ -732,7 +748,7 @@ return;
 
 xacc.append(
 h('h2','Mon compte'),
-h('p',user.email,'mu'),
+h('p','Compte connecté ✓','mu'),
 btn('Changer mon mot de passe','btn2',async()=>{
 try{
 await sendPasswordResetEmail(auth,user.email);
@@ -1338,7 +1354,7 @@ if(!user){box.append(h('p','Connecte-toi pour voir tes abonnés.','mu'));return;
 if(!followers.length){box.append(h('p','Personne ne te suit pour le moment. Publie de bonnes annonces 😉','mu'));return;}
 followers.slice().sort((a,b)=>(b.t||0)-(a.t||0)).forEach(f=>{
 const c=h('div',null,'mod');
-c.append(h('b',f.followerEmail||'Abonné'),
+c.append(h('b','Abonné'),
 h('span','Depuis le '+new Date(f.t||0).toLocaleDateString('fr-FR'),'mu'));
 box.append(c);
 });
