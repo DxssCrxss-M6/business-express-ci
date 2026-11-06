@@ -712,365 +712,23 @@ box.append(h('div',m.text,'xb '+(m.from===user.uid?'me':'ot')));
 box.scrollTop=box.scrollHeight;
 },()=>{box.replaceChildren(h('p','Impossible de charger les messages.','mu'));});
 }
-/* Mon compte */
-<script type="module">
-import {getApp} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-app.js";
-import {getAuth,onAuthStateChanged,sendPasswordResetEmail} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-auth.js";
-import {
-getFirestore,collection,query,where,orderBy,onSnapshot,
-addDoc,setDoc,updateDoc,doc,getDoc,serverTimestamp
-} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-firestore.js";
-
-const app=getApp(),auth=getAuth(app),db=getFirestore(app);
-const $=id=>document.getElementById(id);
-
-function h(tag,text,cls){
-const e=document.createElement(tag);
-if(text!=null)e.textContent=text;
-if(cls)e.className=cls;
-return e;
-}
-function btn(text,cls,fn){
-const b=h('button',text,cls);
-b.type='button';
-b.onclick=fn;
-return b;
-}
-const money=i=>Number(i.price).toLocaleString('fr-FR')+' FCFA'+(i.unit?' '+i.unit:'');
-
-const st=document.createElement('style');
-st.textContent=`
-body{padding-bottom:calc(68px + env(safe-area-inset-bottom,0px))}
-#xnav{position:fixed;left:0;right:0;bottom:0;z-index:50;display:flex;background:#fff;
-border-top:1px solid var(--bd);padding-bottom:env(safe-area-inset-bottom,0px)}
-#xnav button{flex:1;min-height:58px;background:none;border:0;border-radius:0;color:var(--mu);
-font-size:12px;font-weight:600;display:flex;flex-direction:column;align-items:center;
-justify-content:center;gap:2px;padding:0}
-#xnav button span{font-size:20px;line-height:1}
-#xnav button.on{color:var(--ac)}
-body:is([data-tab="fav"],[data-tab="msg"]) :is(#q,main>.row,#list,#terms,#tl,#detail,#authp,#sellp,#salesPanel,#adm){display:none!important}
-body[data-tab="acc] :is(#q,main>.row,#list,#terms,#tl,#detail){display:none!important}
-#xfav .row>button{flex:1}
-#xmsg .row button{flex:none}
-.xbox{display:flex;flex-direction:column;gap:6px;max-height:55vh;overflow-y:auto;padding:4px 0}
-.xb{max-width:80%;padding:8px 12px;border-radius:12px;font-size:15px;word-break:break-word}
-.xb.me{align-self:flex-end;background:var(--nv)}
-.xb.ot{align-self:flex-start;background:#fff;border:1px solid var(--bd)}
-.xrow button{flex:1}
-#xacc .profile-photo{width:100px;height:100px;border-radius:50%;object-fit:cover;border:2px solid var(--bd)}
-`;
-document.head.append(st);
-
-let user=null,items=[],chats=[],bch=[],sch=[],unsubs=[];
-let tab='home',thread=null,unsubThread=null;
-let favs=[];
-try{favs=JSON.parse(localStorage.getItem('xfav')||'[]');if(!Array.isArray(favs))favs=[];}catch(e){favs=[];}
-function toggleFav(id){
-favs=favs.includes(id)?favs.filter(x=>x!==id):[...favs,id];
-try{localStorage.setItem('xfav',JSON.stringify(favs));}catch(e){}
-}
-
-/* Mot de passe oublié */
-const forgot=btn('Mot de passe oublié ?','btn2',async()=>{
-const m=$('amsg'),e=$('em').value.trim();
-if(!e){m.textContent='Écris ton e-mail dans la case ci-dessus.';return;}
-try{
-await sendPasswordResetEmail(auth,e);
-m.textContent='Si un compte existe avec cet e-mail, un lien de réinitialisation vient d’être envoyé. Pense à regarder les spams.';
-}catch(x){
-m.textContent=(x&&x.code||'').includes('invalid-email')?'E-mail invalide.':'Envoi impossible. Réessaie.';
-}
-});
-$('signup').after(forgot);
-
-/* Menu du bas */
-const main=document.querySelector('main');
-const xfav=h('section'),xmsg=h('section'),xacc=h('section');
-xfav.id='xfav';xmsg.id='xmsg';xacc.id='xacc';
-xfav.hidden=xmsg.hidden=xacc.hidden=true;
-main.prepend(xfav,xmsg,xacc);
-
-const nav=h('nav');nav.id='xnav';
-[['home','🏠','Accueil'],['fav','♡','Enregistré'],['msg','💬','Message'],['acc','👤','Mon compte']]
-.forEach(([k,ic,tx])=>{
-const b=h('button');b.type='button';b.dataset.k=k;
-b.append(h('span',ic),document.createTextNode(tx));
-b.onclick=()=>go(k);
-nav.append(b);
-});
-document.body.append(nav);
-
-function go(k){
-tab=k;
-document.body.dataset.tab=k;
-nav.querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.k===k));
-xfav.hidden=k!=='fav';xmsg.hidden=k!=='msg';xacc.hidden=k!=='acc';
-if(k!=='msg'&&unsubThread){unsubThread();unsubThread=null;}
-if(k==='fav')renderFav();
-if(k==='msg')renderMsg();
-if(k==='acc')renderAcc();
-window.scrollTo(0,0);
-}
-
-/* Enregistré */
-function openAd(i){
-go('home');
-['q','fc','fv'].forEach(k=>{$(k).value='';$(k).dispatchEvent(new Event('input'));});
-const c=[...$('list').children].find(x=>x.textContent.includes(i.title)&&x.textContent.includes(money(i)));
-if(c)c.click();
-}
-function renderFav(){
-xfav.replaceChildren(h('h2','Enregistré'));
-const l=items.filter(i=>favs.includes(i.id));
-if(!l.length){
-xfav.append(h('p','Aucune annonce enregistrée. Ouvre une annonce et appuie sur « Enregistrer ».','mu'));
-return;
-}
-l.forEach(i=>{
-const c=h('div',null,'mod');
-c.append(h('b',money(i)),h('span',i.title),h('span',(i.city||'')+' · '+(i.cat||''),'mu'));
-const row=h('div',null,'row');
-row.append(btn('Voir','btn',()=>openAd(i)),btn('Retirer','btn2',()=>{toggleFav(i.id);renderFav();}));
-c.append(row);xfav.append(c);
-});
-}
-
-/* Boutons dans le détail d'une annonce */
-const det=$('detail');
-new MutationObserver(()=>{
-if(det.hidden||det.querySelector('.xrow'))return;
-const t=[...det.children].find(e=>e.tagName==='B');
-const m=det.querySelector(':scope>h2');
-if(!t||!m)return;
-const i=items.find(x=>x.title===t.textContent&&money(x)===m.textContent);
-if(!i)return;
-const row=h('div',null,'row xrow');
-const fv=btn('', 'btn2',()=>{toggleFav(i.id);upd();});
-function upd(){fv.textContent=favs.includes(i.id)?'★ Enregistré':'☆ Enregistrer';}
-upd();
-row.append(fv);
-if(!user||user.uid!==i.uid)row.append(btn('💬 Message','btn2',()=>startChat(i)));
-t.after(row);
-}).observe(det,{childList:true});
-
-onSnapshot(query(collection(db,'products'),where('ok','==',true)),s=>{
-items=s.docs.map(d=>({id:d.id,...d.data()}));
-if(tab==='fav')renderFav();
-},()=>{});
-
-/* Messages */
-async function startChat(i){
-if(!user){alert('Connecte-toi pour envoyer un message.');go('acc');return;}
-const cid=i.id+'_'+user.uid;
-try{
-await setDoc(doc(db,'chats',cid),{
-productId:i.id,title:i.title,buyerUid:user.uid,sellerUid:i.uid,t:Date.now()
-},{merge:true});
-}catch(e){alert('Impossible d’ouvrir la conversation.');return;}
-thread={id:cid,title:i.title,buyerUid:user.uid,sellerUid:i.uid};
-go('msg');
-}
-
-function renderMsg(){
-if(unsubThread){unsubThread();unsubThread=null;}
-xmsg.replaceChildren();
-if(!user){
-xmsg.append(h('h2','Messages'),h('p','Connecte-toi pour voir tes messages.','mu'),btn('Se connecter','btn',()=>go('acc')));
-return;
-}
-if(thread){drawThread();return;}
-xmsg.append(h('h2','Messages'));
-if(!chats.length){
-xmsg.append(h('p','Aucune conversation. Ouvre une annonce et appuie sur « Message ».','mu'));
-return;
-}
-chats.forEach(c=>{
-const b=h('button',null,'card');b.type='button';
-b.append(h('b',c.title||'Annonce'),h('span',c.last||'Nouvelle conversation','mu'),
-h('span',c.buyerUid===user.uid?'Tu écris au vendeur':'Un acheteur t’a écrit','mu'));
-b.onclick=()=>{thread=c;renderMsg();};
-xmsg.append(b);
-});
-}
-
-function drawThread(){
-const t=thread;
-xmsg.append(btn('← Retour','btn2',()=>{thread=null;renderMsg();}),h('b',t.title||'Annonce'));
-const box=h('div',null,'xbox');
-xmsg.append(box);
-const inp=document.createElement('input');
-inp.placeholder='Écris ton message…';inp.maxLength=500;
-const send=btn('Envoyer','btn',async()=>{
-const x=inp.value.trim();
-if(!x)return;
-inp.value='';
-try{
-await addDoc(collection(db,'chats',t.id,'msgs'),{from:user.uid,text:x,t:Date.now()});
-await updateDoc(doc(db,'chats',t.id),{last:x,t:Date.now()});
-}catch(e){alert('Message non envoyé.');}
-});
-const row=h('div',null,'row');
-row.append(inp,send);
-xmsg.append(row);
-unsubThread=onSnapshot(query(collection(db,'chats',t.id,'msgs'),orderBy('t')),s=>{
-box.replaceChildren();
-s.docs.forEach(d=>{
-const m=d.data();
-box.append(h('div',m.text,'xb '+(m.from===user.uid?'me':'ot')));
-});
-box.scrollTop=box.scrollHeight;
-},()=>{box.replaceChildren(h('p','Impossible de charger les messages.','mu'));});
-}
 
 function mergeChats(){
 chats=[...new Map([...bch,...sch].map(x=>[x.id,x])).values()].sort((a,b)=>(b.t||0)-(a.t||0));
 if(tab==='msg'&&!thread)renderMsg();
 }
 
-/* Compression de la photo de profil */
-function profileImageData(file){
-return new Promise((resolve,reject)=>{
-if(!file||!file.type.startsWith('image/')){reject(new Error('Fichier image invalide.'));return;}
-const reader=new FileReader();
-reader.onload=()=>{
-const img=new Image();
-img.onload=()=>{
-const scale=Math.min(1,640/Math.max(img.width,img.height));
-const canvas=document.createElement('canvas');
-canvas.width=Math.round(img.width*scale);
-canvas.height=Math.round(img.height*scale);
-canvas.getContext('2d').drawImage(img,0,0,canvas.width,canvas.height);
-let result=canvas.toDataURL('image/jpeg',0.55);
-if(result.length>700000)result=canvas.toDataURL('image/jpeg',0.35);
-if(result.length>700000){reject(new Error('Photo trop volumineuse.'));return;}
-resolve(result);
-};
-img.onerror=()=>reject(new Error('Impossible de lire cette photo.'));
-img.src=reader.result;
-};
-reader.onerror=()=>reject(new Error('Lecture de la photo impossible.'));
-reader.readAsDataURL(file);
-});
-}
-
-/* Mon compte : nom, photo, biographie et mot de passe */
-async function renderAcc(){
+/* Mon compte */
+function renderAcc(){
 xacc.replaceChildren();
-if(!user){
-xacc.append(h('h2','Mon compte'),h('p','Connecte-toi pour accéder à ton compte.','mu'));
-$('authp').hidden=false;
-return;
-}
-$('authp').hidden=true;
-const currentUid=user.uid;
-xacc.append(h('h2','Mon compte'),h('p',user.email||'','mu'));
-
-const status=h('p','','mu');
-const photo=document.createElement('img');
-photo.className='profile-photo';
-photo.alt='Photo de profil';
-photo.src='data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=';
-
-const name=document.createElement('input');
-name.maxLength=40;
-name.placeholder='Ton nom (40 caractères maximum)';
-
-const bio=document.createElement('textarea');
-bio.maxLength=160;
-bio.rows=3;
-bio.placeholder='Ta biographie (160 caractères maximum)';
-
-const file=document.createElement('input');
-file.type='file';
-file.accept='image/*';
-
-const save=btn('Enregistrer les modifications','btn',async()=>{
-if(!auth.currentUser||auth.currentUser.uid!==currentUid)return;
-const newName=name.value.trim();
-const newBio=bio.value.trim();
-if(!newName){status.textContent='Le nom ne peut pas être vide.';return;}
-save.disabled=true;
-status.textContent='Enregistrement en cours…';
-try{
-const ref=doc(db,'users',currentUid);
-const snap=await getDoc(ref);
-if(!snap.exists()){
-await setDoc(ref,{
-name:newName,photo:photo.dataset.value||'',bio:newBio,
-nameChangedAt:serverTimestamp(),
-photoChangedAt:serverTimestamp(),
-createdAt:serverTimestamp(),
-updatedAt:serverTimestamp()
-});
-}else{
-const old=snap.data();
-const changes={bio:newBio,updatedAt:serverTimestamp()};
-if(newName!==String(old.name||'')){
-const last=old.nameChangedAt?.toMillis?.()||0;
-if(last&&Date.now()-last<30*24*60*60*1000){
-throw new Error('Tu dois attendre 30 jours avant de modifier ton nom à nouveau.');
-}
-changes.name=newName;
-changes.nameChangedAt=serverTimestamp();
-}
-if(photo.dataset.value!==undefined&&photo.dataset.value!==String(old.photo||'')){
-const last=old.photoChangedAt?.toMillis?.()||0;
-if(last&&Date.now()-last<30*24*60*60*1000){
-throw new Error('Tu dois attendre 30 jours avant de changer ta photo à nouveau.');
-}
-changes.photo=photo.dataset.value;
-changes.photoChangedAt=serverTimestamp();
-}
-await updateDoc(ref,changes);
-}
-status.textContent='Profil enregistré avec succès.';
-}catch(e){
-status.textContent=e.message||'Enregistrement impossible. Vérifie les règles Firestore.';
-}finally{
-save.disabled=false;
-}
-});
-
-try{
-const snap=await getDoc(doc(db,'users',currentUid));
-if(!auth.currentUser||auth.currentUser.uid!==currentUid)return;
-if(snap.exists()){
-const data=snap.data();
-name.value=data.name||'';
-bio.value=data.bio||'';
-photo.dataset.value=data.photo||'';
-if(data.photo)photo.src=data.photo;
-}else{
-name.value=user.displayName||'';
-photo.dataset.value='';
-}
-}catch(e){
-status.textContent='Impossible de charger ton profil. Vérifie les règles Firestore.';
-}
-
-file.onchange=async()=>{
-const selected=file.files&&file.files[0];
-if(!selected)return;
-try{
-const data=await profileImageData(selected);
-photo.src=data;
-photo.dataset.value=data;
-status.textContent='Photo sélectionnée. Appuie sur Enregistrer pour confirmer.';
-}catch(e){
-status.textContent=e.message||'Photo impossible à utiliser.';
-}
-};
-
-xacc.append(photo,file,h('label','Nom'),name,h('label','Biographie'),bio,save,status);
-xacc.append(btn('Changer mon mot de passe','btn2',async()=>{
-try{
-await sendPasswordResetEmail(auth,user.email);
-alert('Un lien de réinitialisation a été envoyé par e-mail.');
-}catch(e){alert('Envoi impossible.');}
+if(!user){$('authp').hidden=false;return;}
+xacc.append(h('h2','Mon compte'),h('p',user.email,'mu'),
+btn('Changer mon mot de passe','btn2',async()=>{
+try{await sendPasswordResetEmail(auth,user.email);alert('Un lien t’a été envoyé par e-mail.');}
+catch(e){alert('Envoi impossible.');}
 }));
 }
 
-/* Connexion et écoute des conversations */
 onAuthStateChanged(auth,u=>{
 user=u;
 unsubs.forEach(f=>f());unsubs=[];
@@ -1269,13 +927,17 @@ setTimeout(()=>xag.scrollIntoView(),50);
 }));
 </script><style>#xagadm:empty{display:none!important}</style>
 <style>
-<style>
-/* PARAMÈTRES ZARAKOUSTRA */
+/* PARAMÈTRES ZARATHOUSTRA */
 :root[data-theme="dark"]{
   color-scheme:dark;
-  --bg:#101820;--tx:#F1F5F9;--mu:#AAB8C5;
-  --bd:#34495A;--cd:#1B2935;--nv:#243C50;
-  --hd:#FFFFFF;--ac:#65BDEB;
+  --bg:#101820;
+  --tx:#F1F5F9;
+  --mu:#AAB8C5;
+  --bd:#34495A;
+  --cd:#1B2935;
+  --nv:#243C50;
+  --hd:#FFFFFF;
+  --ac:#65BDEB;
 }
 #settingsPanel{display:none}
 body[data-tab="acc"] #settingsPanel{display:flex}
@@ -1287,17 +949,20 @@ body[data-tab="acc"] #settingsPanel{display:flex}
 const $=id=>document.getElementById(id);
 
 /* Nom officiel */
-document.title="ZARAKOUSTRA";
-const title=document.querySelector("header h1");
-if(title)title.textContent="ZARAKOUSTRA";
+document.title="Zarathoustra";
+document.querySelector("header h1").textContent="Zarathoustra";
 
-/* Ajouter les villes sans doublons */
-const cities=["Bonoua","Yaou","Grand-Bassam","Adiaké","Assinie","Aboisso"];
+/* Nouvelles villes */
+const cities=[
+"Bonoua","Yaou","Grand-Bassam",
+"Adiaké","Assinie","Aboisso"
+];
 ["vi","fv"].forEach(id=>{
- const s=$(id);
- if(s)cities.forEach(v=>{
-  if(![...s.options].some(o=>o.value===v))s.add(new Option(v,v));
- });
+const s=$(id);
+if(s)cities.forEach(v=>{
+if(![...s.options].some(o=>o.value===v))
+s.add(new Option(v,v));
+});
 });
 
 /* Paramètres */
@@ -1305,6 +970,7 @@ const panel=document.createElement("section");
 panel.id="settingsPanel";
 panel.innerHTML=`
 <h2>Paramètres</h2>
+
 <label for="appLanguage">Langue</label>
 <select id="appLanguage">
 <option value="fr">🇫🇷 Français</option>
@@ -1312,216 +978,55 @@ panel.innerHTML=`
 <option value="es">🇪🇸 Español</option>
 <option value="de">🇩🇪 Deutsch</option>
 </select>
-<label for="appTheme">Apparence</label>
+
+<label>Apparence</label>
 <select id="appTheme">
 <option value="light">☀️ Mode clair</option>
 <option value="dark">🌙 Mode sombre</option>
 </select>
-<h3>Contacter l’agence</h3>
-<p class="mu">Signaler un vendeur suspect, une annonce frauduleuse ou demander de l’aide.</p>
-<a class="lnk btn" href="https://wa.me/2250170075417?text=Bonjour%20Zarakhoustra%2C%20je%20souhaite%20signaler%20un%20probl%C3%A8me.">Contacter sur WhatsApp</a>
-<a class="lnk btn2" href="mailto:businessci1213@gmail.com?subject=Signalement%20ZARAKOUSTRA">Envoyer un e-mail</a>
+
+<h3>Contacter l'agence</h3>
+<p class="mu">Signaler un vendeur suspect, une annonce frauduleuse ou demander de l'aide.</p>
+<a class="lnk btn" href="https://wa.me/2250170075417?text=Bonjour%20Zarathoustra%2C%20je%20souhaite%20signaler%20un%20probl%C3%A8me.">
+Contacter sur WhatsApp
+</a>
+<a class="lnk btn2" href="mailto:businessci1213@gmail.com?subject=Signalement%20Zarathoustra">
+Envoyer un e-mail
+</a>
 <p class="mu">WhatsApp : +225 0170075417</p>
 <p class="mu">E-mail : businessci1213@gmail.com</p>
 `;
-const settingsBtn=document.createElement("button");
-settingsBtn.type="button";
-settingsBtn.className="btn2";
-settingsBtn.textContent="⚙️ Paramètres";
 
-settingsBtn.onclick=()=>{
-  panel.style.display=panel.style.display==="flex"?"none":"flex";
-};
-
-$("xacc").prepend(settingsBtn);
 $("xacc").append(panel);
-/* Dictionnaire de traduction */
-const D={
-en:{
-"Connexion":"Login","Se connecter":"Sign in","Créer un compte":"Create account",
-"Mot de passe (6 caractères minimum)":"Password (minimum 6 characters)",
-"J’accepte les conditions d’utilisation":"I accept the terms of use",
-"Publier une annonce":"Post an ad","Mon identifiant":"My ID",
-"Ton annonce sera visible après validation.":"Your ad will be visible after approval.",
-"Photos (4 maximum)":"Photos (maximum 4)","Titre":"Title","Catégorie":"Category",
-"Ville":"City","Prix (FCFA)":"Price (CFA francs)","Type de prix":"Price type",
-"Description":"Description","Lien facultatif":"Optional link","Ton nom":"Your name",
-"Ton numéro WhatsApp":"Your WhatsApp number","Publier mon annonce":"Post my ad",
-"Se déconnecter":"Log out","Mes ventes et achats":"My sales and purchases",
-"Les avis sont autorisés uniquement après confirmation de la vente par le vendeur.":"Reviews are allowed only after the seller confirms the sale.",
-"Rechercher une annonce…":"Search for an ad…","Toutes les catégories":"All categories",
-"Toutes les villes":"All cities","Conditions d’utilisation":"Terms of use",
-"Fermer":"Close","Accueil":"Home","Enregistré":"Saved","Message":"Messages",
-"Mon compte":"My account","Aucune annonce pour l’instant.":"No ads yet.",
-"Pas de photo":"No photo","Vendeur vérifié":"Verified seller",
-"Voir le lien":"Open link","Voir le numéro du vendeur":"View seller's phone number",
-"Appeler":"Call","Demander la confirmation de vente":"Request sale confirmation",
-"Signaler cette annonce":"Report this ad","Supprimer mon annonce":"Delete my ad",
-"Confirmer la vente":"Confirm sale","Ouvrir l’annonce pour noter":"Open ad to leave a review",
-"Évaluer le vendeur":"Rate the seller","Commentaire facultatif (300 caractères maximum)":"Optional comment (maximum 300 characters)",
-"Envoyer mon avis":"Submit review","Envoyer":"Send","Écrire ton message…":"Write your message…",
-"Mot de passe oublié ?":"Forgot password?","Changer mon mot de passe":"Change my password",
-"Contacter l’agence":"Contact the agency","Envoyer à l’agence":"Send to the agency",
-"Paramètres":"Settings","Langue":"Language","Apparence":"Appearance",
-"Mode clair":"Light mode","Mode sombre":"Dark mode",
-"Contacter sur WhatsApp":"Contact on WhatsApp","Envoyer un e-mail":"Send an email",
-"Compte suspect":"Suspicious account","Arnaque (j’ai été arnaqué)":"Scam (I was scammed)",
-"Faux vendeur ou fausse annonce":"Fake seller or fake ad","Autre problème":"Other issue",
-"Nom du vendeur ou titre de l’annonce":"Seller name or ad title",
-"Explique ce qui s’est passé…":"Explain what happened…",
-"Ton numéro pour te rappeler (facultatif)":"Your phone number (optional)",
-"Marquer traité":"Mark as resolved","Supprimer":"Delete","Ignorer":"Ignore",
-"À valider":"Pending approval","Signalements":"Reports","Vendeurs":"Sellers",
-"Approuver":"Approve","Bloquer cet utilisateur":"Block this user",
-"Débloquer":"Unblock","Vérifier ce vendeur":"Verify this seller",
-"Retirer le badge":"Remove badge"
-},
-es:{
-"Connexion":"Iniciar sesión","Se connecter":"Entrar","Créer un compte":"Crear cuenta",
-"Mot de passe (6 caractères minimum)":"Contraseña (mínimo 6 caracteres)",
-"J’accepte les conditions d’utilisation":"Acepto las condiciones de uso",
-"Publier une annonce":"Publicar anuncio","Mon identifiant":"Mi identificador",
-"Ton annonce sera visible après validation.":"Tu anuncio será visible después de su aprobación.",
-"Photos (4 maximum)":"Fotos (máximo 4)","Titre":"Título","Catégorie":"Categoría",
-"Ville":"Ciudad","Prix (FCFA)":"Precio (FCFA)","Type de prix":"Tipo de precio",
-"Description":"Descripción","Lien facultatif":"Enlace opcional","Ton nom":"Tu nombre",
-"Ton numéro WhatsApp":"Tu número de WhatsApp","Publier mon annonce":"Publicar anuncio",
-"Se déconnecter":"Cerrar sesión","Mes ventes et achats":"Mis ventas y compras",
-"Rechercher une annonce…":"Buscar un anuncio…","Toutes les catégories":"Todas las categorías",
-"Toutes les villes":"Todas las ciudades","Conditions d’utilisation":"Condiciones de uso",
-"Fermer":"Cerrar","Accueil":"Inicio","Enregistré":"Guardados","Message":"Mensajes",
-"Mon compte":"Mi cuenta","Aucune annonce pour l’instant.":"Todavía no hay anuncios.",
-"Pas de photo":"Sin foto","Vendeur vérifié":"Vendedor verificado",
-"Voir le lien":"Ver enlace","Voir le numéro du vendeur":"Ver número del vendedor",
-"Appeler":"Llamar","Demander la confirmation de vente":"Solicitar confirmación de venta",
-"Signaler cette annonce":"Denunciar anuncio","Supprimer mon annonce":"Eliminar mi anuncio",
-"Confirmer la vente":"Confirmar venta","Ouvrir l’annonce pour noter":"Abrir anuncio para valorar",
-"Évaluer le vendeur":"Valorar al vendedor","Envoyer mon avis":"Enviar valoración",
-"Envoyer":"Enviar","Écrire ton message…":"Escribe tu mensaje…",
-"Mot de passe oublié ?":"¿Olvidaste tu contraseña?","Changer mon mot de passe":"Cambiar contraseña",
-"Contacter l’agence":"Contactar con la agencia","Envoyer à l’agence":"Enviar a la agencia",
-"Paramètres":"Configuración","Langue":"Idioma","Apparence":"Apariencia",
-"Mode clair":"Modo claro","Mode sombre":"Modo oscuro",
-"Contacter sur WhatsApp":"Contactar por WhatsApp","Envoyer un e-mail":"Enviar un correo",
-"Compte suspect":"Cuenta sospechosa","Arnaque (j’ai été arnaqué)":"Estafa",
-"Faux vendeur ou fausse annonce":"Vendedor o anuncio falso","Autre problème":"Otro problema",
-"Nom du vendeur ou titre de l’annonce":"Nombre del vendedor o título del anuncio",
-"Explique ce qui s’est passé…":"Explica qué pasó…",
-"Ton numéro pour te rappeler (facultatif)":"Tu teléfono (opcional)",
-"Marquer traité":"Marcar como resuelto","Supprimer":"Eliminar","Ignorer":"Ignorar",
-"Approuver":"Aprobar","Bloquer cet utilisateur":"Bloquear usuario",
-"Débloquer":"Desbloquear","Vérifier ce vendeur":"Verificar vendedor",
-"Retirer le badge":"Quitar insignia"
-},
-de:{
-"Connexion":"Anmelden","Se connecter":"Einloggen","Créer un compte":"Konto erstellen",
-"Mot de passe (6 caractères minimum)":"Passwort (mindestens 6 Zeichen)",
-"J’accepte les conditions d’utilisation":"Ich akzeptiere die Nutzungsbedingungen",
-"Publier une annonce":"Anzeige veröffentlichen","Mon identifiant":"Meine ID",
-"Ton annonce sera visible après validation.":"Deine Anzeige wird nach Freigabe sichtbar.",
-"Photos (4 maximum)":"Fotos (maximal 4)","Titre":"Titel","Catégorie":"Kategorie",
-"Ville":"Stadt","Prix (FCFA)":"Preis (FCFA)","Type de prix":"Preistyp",
-"Description":"Beschreibung","Lien facultatif":"Optionaler Link","Ton nom":"Dein Name",
-"Ton numéro WhatsApp":"Deine WhatsApp-Nummer","Publier mon annonce":"Anzeige veröffentlichen",
-"Se déconnecter":"Abmelden","Mes ventes et achats":"Meine Verkäufe und Käufe",
-"Rechercher une annonce…":"Anzeige suchen…","Toutes les catégories":"Alle Kategorien",
-"Toutes les villes":"Alle Städte","Conditions d’utilisation":"Nutzungsbedingungen",
-"Fermer":"Schließen","Accueil":"Startseite","Enregistré":"Gespeichert","Message":"Nachrichten",
-"Mon compte":"Mein Konto","Aucune annonce pour l’instant.":"Noch keine Anzeigen.",
-"Pas de photo":"Kein Foto","Vendeur vérifié":"Verifizierter Verkäufer",
-"Voir le lien":"Link öffnen","Voir le numéro du vendeur":"Telefonnummer des Verkäufers anzeigen",
-"Appeler":"Anrufen","Demander la confirmation de vente":"Verkaufsbestätigung anfordern",
-"Signaler cette annonce":"Anzeige melden","Supprimer mon annonce":"Meine Anzeige löschen",
-"Confirmer la vente":"Verkauf bestätigen","Ouvrir l’annonce pour noter":"Anzeige zum Bewerten öffnen",
-"Évaluer le vendeur":"Verkäufer bewerten","Envoyer mon avis":"Bewertung senden",
-"Envoyer":"Senden","Écrire ton message…":"Nachricht schreiben…",
-"Mot de passe oublié ?":"Passwort vergessen?","Changer mon mot de passe":"Passwort ändern",
-"Contacter l’agence":"Agentur kontaktieren","Envoyer à l’agence":"An Agentur senden",
-"Paramètres":"Einstellungen","Langue":"Sprache","Apparence":"Darstellung",
-"Mode clair":"Heller Modus","Mode sombre":"Dunkler Modus",
-"Contacter sur WhatsApp":"Über WhatsApp kontaktieren","Envoyer un e-mail":"E-Mail senden",
-"Compte suspect":"Verdächtiges Konto","Arnaque (j’ai été arnaqué)":"Betrug",
-"Faux vendeur ou fausse annonce":"Falscher Verkäufer oder Anzeige","Autre problème":"Anderes Problem",
-"Nom du vendeur ou titre de l’annonce":"Verkäufername oder Anzeigentitel",
-"Explique ce qui s’est passé…":"Beschreibe, was passiert ist…",
-"Ton numéro pour te rappeler (facultatif)":"Deine Telefonnummer (optional)",
-"Marquer traité":"Als erledigt markieren","Supprimer":"Löschen","Ignorer":"Ignorieren",
-"Approuver":"Genehmigen","Bloquer cet utilisateur":"Benutzer blockieren",
-"Débloquer":"Entsperren","Vérifier ce vendeur":"Verkäufer überprüfen",
-"Retirer le badge":"Abzeichen entfernen"
-}
-};
 
-/* Texte français -> traduction */
-const original=new WeakMap();
-const originalAttrs=new WeakMap();
-const originalAttrs=new WeakMap();
-let current="fr";
-
-function translateNode(node){
-if(node.nodeType===Node.TEXT_NODE){
- if(!original.has(node))original.set(node,node.nodeValue);
- const source=original.get(node).trim();
- if(!source)return;
- const translated=(D[current]||{})[source];
- if(translated){
-  const leading=original.get(node).match(/^\s*/)?.[0]||"";
-  const trailing=original.get(node).match(/\s*$/)?.[0]||"";
-  node.nodeValue=leading+translated+trailing;
- }else node.nodeValue=original.get(node);
-}
-else if(node.nodeType===Node.ELEMENT_NODE){
- if(node.id==="appLanguage"||node.id==="appTheme")return;
- ["placeholder","aria-label","title"].forEach(attr=>{
-  if(node.hasAttribute(attr)){
-   const key="attr_"+attr;
-if(!originalAttrs.has(node[key]))originalAttrs.set(node[key],node.getAttribute(attr));
-const source=originalAttrs.get(node[key]);
-node.setAttribute(attr,(D[current]||{})[source]||source);
-}
-});
- node.childNodes.forEach(translateNode);
-}
-}
-
-function applyLanguage(){
-current=$("appLanguage").value;
-document.documentElement.lang=current;
-document.querySelectorAll("body *").forEach(translateNode);
-localStorage.setItem("zarakhoustra_language",current);
-}
-
-/* Thème */
+/* Mémorisation du thème */
 const theme=$("appTheme");
 const lang=$("appLanguage");
-theme.value=localStorage.getItem("zarakhoustra_theme")||"light";
-lang.value=localStorage.getItem("zarakhoustra_language")||"fr";
+
+theme.value=localStorage.getItem("zarathoustra_theme")||"light";
+lang.value=localStorage.getItem("zarathoustra_language")||"fr";
 
 function applyTheme(){
 document.documentElement.dataset.theme=theme.value;
-localStorage.setItem("zarakhoustra_theme",theme.value);
+localStorage.setItem("zarathoustra_theme",theme.value);
 }
 theme.onchange=applyTheme;
-lang.onchange=applyLanguage;
+lang.onchange=()=>{
+localStorage.setItem("zarathoustra_language",lang.value);
+};
 applyTheme();
-applyLanguage();
 
-/* Traduire aussi les éléments ajoutés dynamiquement */
+/* Correction du nom dans les textes générés */
 const observer=new MutationObserver(()=>{
- if(current!=="fr"){
-  document.querySelectorAll("body *").forEach(translateNode);
- }
+document.querySelectorAll("header h1").forEach(e=>{
+if(e.textContent==="ZARATHOUSTRA")e.textContent="Zarathoustra";
+});
 });
 observer.observe(document.body,{childList:true,subtree:true});
-
-/* Nom officiel dans l’en-tête */
-const nameObserver=new MutationObserver(()=>{
-const h=document.querySelector("header h1");
-if(h&&h.textContent!=="ZARAKOUSTRA")h.textContent="ZARAKOUSTRA";
-});
-nameObserver.observe(document.body,{childList:true,subtree:true});
 })();
 </script>
 </body>
 </html>
 
+</body>
+</html>
