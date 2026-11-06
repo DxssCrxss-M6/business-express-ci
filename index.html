@@ -1060,7 +1060,22 @@ s.add(new Option(v,v));
 const panel=document.createElement("section");
 panel.id="settingsPanel";
 panel.innerHTML=`
+
+panel.innerHTML=`
 <h2>Paramètres</h2>
+
+<h3>Mon espace</h3>
+<button class="btn2" data-open="xmine">📋 Mes annonces</button>
+<button class="btn2" data-open="xrev">⭐ Mes avis</button>
+<button class="btn2" data-open="xfaq">❓ Questions fréquentes</button>
+<button class="btn2" data-open="xnotif">🔔 Notifications</button>
+<button class="btn2" data-open="xfol">👥 Mes abonnés</button>
+<button class="btn2" data-open="xmoney">💰 Faire l’argent</button>
+<button class="btn2" data-open="xprofile">📤 Partager mon profil</button>
+<button class="btn2" data-open="xname">✏️ Mon nom</button>
+<button class="btn2" data-open="xagency">🚩 Contacter l’agence</button>
+
+<h3>Préférences</h3>
 
 <label for="appLanguage">Langue</label>
 <select id="appLanguage">
@@ -1076,19 +1091,56 @@ panel.innerHTML=`
 <option value="dark">🌙 Mode sombre</option>
 </select>
 
-<h3>Contacter l'agence</h3>
-<p class="mu">Signaler un vendeur suspect, une annonce frauduleuse ou demander de l'aide.</p>
-<a class="lnk btn" href="https://wa.me/2250170075417?text=Bonjour%20Zarathoustra%2C%20je%20souhaite%20signaler%20un%20probl%C3%A8me.">
+<h3>Agence ZARAKOUSTRA</h3>
+<a class="lnk btn" href="https://wa.me/2250170075417">
 Contacter sur WhatsApp
 </a>
-<a class="lnk btn2" href="mailto:businessci1213@gmail.com?subject=Signalement%20Zarathoustra">
+<a class="lnk btn2" href="mailto:businessci1213@gmail.com">
 Envoyer un e-mail
 </a>
-<p class="mu">WhatsApp : +225 0170075417</p>
-<p class="mu">E-mail : businessci1213@gmail.com</p>
 `;
 
+
 $("xacc").append(panel);
+
+panel.querySelectorAll('[data-open]').forEach(b=>{
+b.addEventListener('click',()=>{
+const target=b.dataset.open;
+
+document.body.classList.remove('settings-open');
+
+if(target==='xagency'){
+$('xag').scrollIntoView();
+return;
+}
+
+if(target==='xname'){
+$('xname').scrollIntoView();
+return;
+}
+
+if(target==='xprofile'){
+const c=[...$('xgrid').querySelectorAll('.card')]
+.find(e=>e.textContent.includes('Partager mon profil'));
+if(c)c.click();
+return;
+}
+
+const card=[...$('xgrid').querySelectorAll('.card')]
+.find(e=>e.textContent.includes(
+({
+xmine:'Mes annonces',
+xrev:'Avis',
+xfaq:'FAQ',
+xnotif:'Notifications',
+xfol:'Abonnés',
+xmoney:'Faire l’argent'
+})[target]||'---'
+));
+
+if(card)card.click();
+});
+});
 
 /* Mémorisation du thème */
 const theme=$("appTheme");
