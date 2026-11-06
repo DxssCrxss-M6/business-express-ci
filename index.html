@@ -736,7 +736,7 @@ if(tab==='msg'&&!thread)renderMsg();
 
 /* MON COMPTE ET PARAMÈTRES */
 function renderAcc(){
-const settings=$('settingsPanel');
+const settings=window.__sp||(window.__sp=$('settingsPanel'));
 xacc.replaceChildren();
 
 if(!user){
@@ -792,6 +792,8 @@ settings.append(pass);
 xacc.append(settings);
 }
 }
+
+onAuthStateChanged(auth,u=>{
 user=u;
 unsubs.forEach(f=>f());unsubs=[];
 bch=[];sch=[];chats=[];thread=null;
@@ -1785,7 +1787,47 @@ items=s.docs.map(d=>({id:d.id,...d.data()}));
 patchDetail();
 },()=>{});
 onAuthStateChanged(auth,u=>{user=u;draw();fillSe();});
-</script>
+</script><style>
+body[data-tab="acc"] :is(#xgrid,#xag,#xname){display:none!important}
+body[data-tab="acc"][data-sub="xname"] #xname{display:flex!important}
+body[data-tab="acc"][data-sub="xag"] #xag{display:flex!important}
+body[data-tab="acc"]:not([data-sub]) :is(#xmine,#xrev,#xfaq,#xnotif,#xfol,#xmoney){display:none!important}
+body[data-tab="acc"][data-sub] #xacc{display:none!important}
+#subback{display:none}
+body[data-tab="acc"][data-sub] #subback{display:block}
+</style>
+<script type="module">
+const $=id=>document.getElementById(id);
+const B=document.body;
+const SECS=['xmine','xrev','xfaq','xnotif','xfol','xmoney'];
+const back=document.createElement('button');
+back.id='subback';back.type='button';back.className='btn2';
+back.textContent='← Paramètres';
+$('xacc').before(back);
+back.onclick=()=>{
+delete B.dataset.sub;
+B.classList.add('settings-open');
+window.scrollTo(0,0);
+};
+$('settingsPanel').addEventListener('click',e=>{
+const b=e.target.closest('[data-open]');
+if(!b||b.dataset.open==='xprofile')return;
+e.stopPropagation();
+const id=b.dataset.open==='xagency'?'xag':b.dataset.open;
+SECS.forEach(s=>{const x=$(s);if(x)x.hidden=s!==id;});
+B.classList.remove('settings-open');
+B.dataset.sub=id;
+window.scrollTo(0,0);
+},true);
+document.querySelectorAll('#xnav button').forEach(b=>b.addEventListener('click',()=>{
+delete B.dataset.sub;
+B.classList.remove('settings-open');
+}));
+</script><style>
+body[data-tab="acc"].settings-open :is(#sellp,#salesPanel,#adm,#xagadm,#authp),
+body[data-tab="acc"][data-sub] :is(#sellp,#adm,#xagadm,#authp),
+body[data-tab="acc"][data-sub]:not([data-sub="xnotif"]) #salesPanel{display:none!important}
+</style>
 </body>
 </html>
 
