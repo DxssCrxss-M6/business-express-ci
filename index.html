@@ -720,13 +720,31 @@ if(tab==='msg'&&!thread)renderMsg();
 
 /* Mon compte */
 function renderAcc(){
+const settings=$('settingsPanel');
+
 xacc.replaceChildren();
-if(!user){$('authp').hidden=false;return;}
-xacc.append(h('h2','Mon compte'),h('p',user.email,'mu'),
+
+if(!user){
+$('authp').hidden=false;
+if(settings)xacc.append(settings);
+return;
+}
+
+xacc.append(
+h('h2','Mon compte'),
+h('p',user.email,'mu'),
 btn('Changer mon mot de passe','btn2',async()=>{
-try{await sendPasswordResetEmail(auth,user.email);alert('Un lien t’a été envoyé par e-mail.');}
-catch(e){alert('Envoi impossible.');}
-}));
+try{
+await sendPasswordResetEmail(auth,user.email);
+alert('Un lien t’a été envoyé par e-mail.');
+}
+catch(e){
+alert('Envoi impossible.');
+}
+})
+);
+
+if(settings)xacc.append(settings);
 }
 
 onAuthStateChanged(auth,u=>{
