@@ -927,17 +927,13 @@ setTimeout(()=>xag.scrollIntoView(),50);
 }));
 </script><style>#xagadm:empty{display:none!important}</style>
 <style>
-/* PARAMÈTRES ZARATHOUSTRA */
+<style>
+/* PARAMÈTRES ZARAKOUSTRA */
 :root[data-theme="dark"]{
   color-scheme:dark;
-  --bg:#101820;
-  --tx:#F1F5F9;
-  --mu:#AAB8C5;
-  --bd:#34495A;
-  --cd:#1B2935;
-  --nv:#243C50;
-  --hd:#FFFFFF;
-  --ac:#65BDEB;
+  --bg:#101820;--tx:#F1F5F9;--mu:#AAB8C5;
+  --bd:#34495A;--cd:#1B2935;--nv:#243C50;
+  --hd:#FFFFFF;--ac:#65BDEB;
 }
 #settingsPanel{display:none}
 body[data-tab="acc"] #settingsPanel{display:flex}
@@ -949,20 +945,17 @@ body[data-tab="acc"] #settingsPanel{display:flex}
 const $=id=>document.getElementById(id);
 
 /* Nom officiel */
-document.title="Zarathoustra";
-document.querySelector("header h1").textContent="Zarathoustra";
+document.title="ZARAKOUSTRA";
+const title=document.querySelector("header h1");
+if(title)title.textContent="ZARAKOUSTRA";
 
-/* Nouvelles villes */
-const cities=[
-"Bonoua","Yaou","Grand-Bassam",
-"Adiaké","Assinie","Aboisso"
-];
+/* Ajouter les villes sans doublons */
+const cities=["Bonoua","Yaou","Grand-Bassam","Adiaké","Assinie","Aboisso"];
 ["vi","fv"].forEach(id=>{
-const s=$(id);
-if(s)cities.forEach(v=>{
-if(![...s.options].some(o=>o.value===v))
-s.add(new Option(v,v));
-});
+ const s=$(id);
+ if(s)cities.forEach(v=>{
+  if(![...s.options].some(o=>o.value===v))s.add(new Option(v,v));
+ });
 });
 
 /* Paramètres */
@@ -970,7 +963,6 @@ const panel=document.createElement("section");
 panel.id="settingsPanel";
 panel.innerHTML=`
 <h2>Paramètres</h2>
-
 <label for="appLanguage">Langue</label>
 <select id="appLanguage">
 <option value="fr">🇫🇷 Français</option>
@@ -978,55 +970,205 @@ panel.innerHTML=`
 <option value="es">🇪🇸 Español</option>
 <option value="de">🇩🇪 Deutsch</option>
 </select>
-
-<label>Apparence</label>
+<label for="appTheme">Apparence</label>
 <select id="appTheme">
 <option value="light">☀️ Mode clair</option>
 <option value="dark">🌙 Mode sombre</option>
 </select>
-
-<h3>Contacter l'agence</h3>
-<p class="mu">Signaler un vendeur suspect, une annonce frauduleuse ou demander de l'aide.</p>
-<a class="lnk btn" href="https://wa.me/2250170075417?text=Bonjour%20Zarathoustra%2C%20je%20souhaite%20signaler%20un%20probl%C3%A8me.">
-Contacter sur WhatsApp
-</a>
-<a class="lnk btn2" href="mailto:businessci1213@gmail.com?subject=Signalement%20Zarathoustra">
-Envoyer un e-mail
-</a>
+<h3>Contacter l’agence</h3>
+<p class="mu">Signaler un vendeur suspect, une annonce frauduleuse ou demander de l’aide.</p>
+<a class="lnk btn" href="https://wa.me/2250170075417?text=Bonjour%20Zarakhoustra%2C%20je%20souhaite%20signaler%20un%20probl%C3%A8me.">Contacter sur WhatsApp</a>
+<a class="lnk btn2" href="mailto:businessci1213@gmail.com?subject=Signalement%20ZARAKOUSTRA">Envoyer un e-mail</a>
 <p class="mu">WhatsApp : +225 0170075417</p>
 <p class="mu">E-mail : businessci1213@gmail.com</p>
 `;
-
 $("xacc").append(panel);
 
-/* Mémorisation du thème */
+/* Dictionnaire de traduction */
+const D={
+en:{
+"Connexion":"Login","Se connecter":"Sign in","Créer un compte":"Create account",
+"Mot de passe (6 caractères minimum)":"Password (minimum 6 characters)",
+"J’accepte les conditions d’utilisation":"I accept the terms of use",
+"Publier une annonce":"Post an ad","Mon identifiant":"My ID",
+"Ton annonce sera visible après validation.":"Your ad will be visible after approval.",
+"Photos (4 maximum)":"Photos (maximum 4)","Titre":"Title","Catégorie":"Category",
+"Ville":"City","Prix (FCFA)":"Price (CFA francs)","Type de prix":"Price type",
+"Description":"Description","Lien facultatif":"Optional link","Ton nom":"Your name",
+"Ton numéro WhatsApp":"Your WhatsApp number","Publier mon annonce":"Post my ad",
+"Se déconnecter":"Log out","Mes ventes et achats":"My sales and purchases",
+"Les avis sont autorisés uniquement après confirmation de la vente par le vendeur.":"Reviews are allowed only after the seller confirms the sale.",
+"Rechercher une annonce…":"Search for an ad…","Toutes les catégories":"All categories",
+"Toutes les villes":"All cities","Conditions d’utilisation":"Terms of use",
+"Fermer":"Close","Accueil":"Home","Enregistré":"Saved","Message":"Messages",
+"Mon compte":"My account","Aucune annonce pour l’instant.":"No ads yet.",
+"Pas de photo":"No photo","Vendeur vérifié":"Verified seller",
+"Voir le lien":"Open link","Voir le numéro du vendeur":"View seller's phone number",
+"Appeler":"Call","Demander la confirmation de vente":"Request sale confirmation",
+"Signaler cette annonce":"Report this ad","Supprimer mon annonce":"Delete my ad",
+"Confirmer la vente":"Confirm sale","Ouvrir l’annonce pour noter":"Open ad to leave a review",
+"Évaluer le vendeur":"Rate the seller","Commentaire facultatif (300 caractères maximum)":"Optional comment (maximum 300 characters)",
+"Envoyer mon avis":"Submit review","Envoyer":"Send","Écrire ton message…":"Write your message…",
+"Mot de passe oublié ?":"Forgot password?","Changer mon mot de passe":"Change my password",
+"Contacter l’agence":"Contact the agency","Envoyer à l’agence":"Send to the agency",
+"Paramètres":"Settings","Langue":"Language","Apparence":"Appearance",
+"Mode clair":"Light mode","Mode sombre":"Dark mode",
+"Contacter sur WhatsApp":"Contact on WhatsApp","Envoyer un e-mail":"Send an email",
+"Compte suspect":"Suspicious account","Arnaque (j’ai été arnaqué)":"Scam (I was scammed)",
+"Faux vendeur ou fausse annonce":"Fake seller or fake ad","Autre problème":"Other issue",
+"Nom du vendeur ou titre de l’annonce":"Seller name or ad title",
+"Explique ce qui s’est passé…":"Explain what happened…",
+"Ton numéro pour te rappeler (facultatif)":"Your phone number (optional)",
+"Marquer traité":"Mark as resolved","Supprimer":"Delete","Ignorer":"Ignore",
+"À valider":"Pending approval","Signalements":"Reports","Vendeurs":"Sellers",
+"Approuver":"Approve","Bloquer cet utilisateur":"Block this user",
+"Débloquer":"Unblock","Vérifier ce vendeur":"Verify this seller",
+"Retirer le badge":"Remove badge"
+},
+es:{
+"Connexion":"Iniciar sesión","Se connecter":"Entrar","Créer un compte":"Crear cuenta",
+"Mot de passe (6 caractères minimum)":"Contraseña (mínimo 6 caracteres)",
+"J’accepte les conditions d’utilisation":"Acepto las condiciones de uso",
+"Publier une annonce":"Publicar anuncio","Mon identifiant":"Mi identificador",
+"Ton annonce sera visible après validation.":"Tu anuncio será visible después de su aprobación.",
+"Photos (4 maximum)":"Fotos (máximo 4)","Titre":"Título","Catégorie":"Categoría",
+"Ville":"Ciudad","Prix (FCFA)":"Precio (FCFA)","Type de prix":"Tipo de precio",
+"Description":"Descripción","Lien facultatif":"Enlace opcional","Ton nom":"Tu nombre",
+"Ton numéro WhatsApp":"Tu número de WhatsApp","Publier mon annonce":"Publicar anuncio",
+"Se déconnecter":"Cerrar sesión","Mes ventes et achats":"Mis ventas y compras",
+"Rechercher une annonce…":"Buscar un anuncio…","Toutes les catégories":"Todas las categorías",
+"Toutes les villes":"Todas las ciudades","Conditions d’utilisation":"Condiciones de uso",
+"Fermer":"Cerrar","Accueil":"Inicio","Enregistré":"Guardados","Message":"Mensajes",
+"Mon compte":"Mi cuenta","Aucune annonce pour l’instant.":"Todavía no hay anuncios.",
+"Pas de photo":"Sin foto","Vendeur vérifié":"Vendedor verificado",
+"Voir le lien":"Ver enlace","Voir le numéro du vendeur":"Ver número del vendedor",
+"Appeler":"Llamar","Demander la confirmation de vente":"Solicitar confirmación de venta",
+"Signaler cette annonce":"Denunciar anuncio","Supprimer mon annonce":"Eliminar mi anuncio",
+"Confirmer la vente":"Confirmar venta","Ouvrir l’annonce pour noter":"Abrir anuncio para valorar",
+"Évaluer le vendeur":"Valorar al vendedor","Envoyer mon avis":"Enviar valoración",
+"Envoyer":"Enviar","Écrire ton message…":"Escribe tu mensaje…",
+"Mot de passe oublié ?":"¿Olvidaste tu contraseña?","Changer mon mot de passe":"Cambiar contraseña",
+"Contacter l’agence":"Contactar con la agencia","Envoyer à l’agence":"Enviar a la agencia",
+"Paramètres":"Configuración","Langue":"Idioma","Apparence":"Apariencia",
+"Mode clair":"Modo claro","Mode sombre":"Modo oscuro",
+"Contacter sur WhatsApp":"Contactar por WhatsApp","Envoyer un e-mail":"Enviar un correo",
+"Compte suspect":"Cuenta sospechosa","Arnaque (j’ai été arnaqué)":"Estafa",
+"Faux vendeur ou fausse annonce":"Vendedor o anuncio falso","Autre problème":"Otro problema",
+"Nom du vendeur ou titre de l’annonce":"Nombre del vendedor o título del anuncio",
+"Explique ce qui s’est passé…":"Explica qué pasó…",
+"Ton numéro pour te rappeler (facultatif)":"Tu teléfono (opcional)",
+"Marquer traité":"Marcar como resuelto","Supprimer":"Eliminar","Ignorer":"Ignorar",
+"Approuver":"Aprobar","Bloquer cet utilisateur":"Bloquear usuario",
+"Débloquer":"Desbloquear","Vérifier ce vendeur":"Verificar vendedor",
+"Retirer le badge":"Quitar insignia"
+},
+de:{
+"Connexion":"Anmelden","Se connecter":"Einloggen","Créer un compte":"Konto erstellen",
+"Mot de passe (6 caractères minimum)":"Passwort (mindestens 6 Zeichen)",
+"J’accepte les conditions d’utilisation":"Ich akzeptiere die Nutzungsbedingungen",
+"Publier une annonce":"Anzeige veröffentlichen","Mon identifiant":"Meine ID",
+"Ton annonce sera visible après validation.":"Deine Anzeige wird nach Freigabe sichtbar.",
+"Photos (4 maximum)":"Fotos (maximal 4)","Titre":"Titel","Catégorie":"Kategorie",
+"Ville":"Stadt","Prix (FCFA)":"Preis (FCFA)","Type de prix":"Preistyp",
+"Description":"Beschreibung","Lien facultatif":"Optionaler Link","Ton nom":"Dein Name",
+"Ton numéro WhatsApp":"Deine WhatsApp-Nummer","Publier mon annonce":"Anzeige veröffentlichen",
+"Se déconnecter":"Abmelden","Mes ventes et achats":"Meine Verkäufe und Käufe",
+"Rechercher une annonce…":"Anzeige suchen…","Toutes les catégories":"Alle Kategorien",
+"Toutes les villes":"Alle Städte","Conditions d’utilisation":"Nutzungsbedingungen",
+"Fermer":"Schließen","Accueil":"Startseite","Enregistré":"Gespeichert","Message":"Nachrichten",
+"Mon compte":"Mein Konto","Aucune annonce pour l’instant.":"Noch keine Anzeigen.",
+"Pas de photo":"Kein Foto","Vendeur vérifié":"Verifizierter Verkäufer",
+"Voir le lien":"Link öffnen","Voir le numéro du vendeur":"Telefonnummer des Verkäufers anzeigen",
+"Appeler":"Anrufen","Demander la confirmation de vente":"Verkaufsbestätigung anfordern",
+"Signaler cette annonce":"Anzeige melden","Supprimer mon annonce":"Meine Anzeige löschen",
+"Confirmer la vente":"Verkauf bestätigen","Ouvrir l’annonce pour noter":"Anzeige zum Bewerten öffnen",
+"Évaluer le vendeur":"Verkäufer bewerten","Envoyer mon avis":"Bewertung senden",
+"Envoyer":"Senden","Écrire ton message…":"Nachricht schreiben…",
+"Mot de passe oublié ?":"Passwort vergessen?","Changer mon mot de passe":"Passwort ändern",
+"Contacter l’agence":"Agentur kontaktieren","Envoyer à l’agence":"An Agentur senden",
+"Paramètres":"Einstellungen","Langue":"Sprache","Apparence":"Darstellung",
+"Mode clair":"Heller Modus","Mode sombre":"Dunkler Modus",
+"Contacter sur WhatsApp":"Über WhatsApp kontaktieren","Envoyer un e-mail":"E-Mail senden",
+"Compte suspect":"Verdächtiges Konto","Arnaque (j’ai été arnaqué)":"Betrug",
+"Faux vendeur ou fausse annonce":"Falscher Verkäufer oder Anzeige","Autre problème":"Anderes Problem",
+"Nom du vendeur ou titre de l’annonce":"Verkäufername oder Anzeigentitel",
+"Explique ce qui s’est passé…":"Beschreibe, was passiert ist…",
+"Ton numéro pour te rappeler (facultatif)":"Deine Telefonnummer (optional)",
+"Marquer traité":"Als erledigt markieren","Supprimer":"Löschen","Ignorer":"Ignorieren",
+"Approuver":"Genehmigen","Bloquer cet utilisateur":"Benutzer blockieren",
+"Débloquer":"Entsperren","Vérifier ce vendeur":"Verkäufer überprüfen",
+"Retirer le badge":"Abzeichen entfernen"
+}
+};
+
+/* Texte français -> traduction */
+const original=new WeakMap();
+let current="fr";
+
+function translateNode(node){
+if(node.nodeType===Node.TEXT_NODE){
+ if(!original.has(node))original.set(node,node.nodeValue);
+ const source=original.get(node).trim();
+ if(!source)return;
+ const translated=(D[current]||{})[source];
+ if(translated){
+  const leading=original.get(node).match(/^\s*/)?.[0]||"";
+  const trailing=original.get(node).match(/\s*$/)?.[0]||"";
+  node.nodeValue=leading+translated+trailing;
+ }else node.nodeValue=original.get(node);
+}
+else if(node.nodeType===Node.ELEMENT_NODE){
+ if(node.id==="appLanguage"||node.id==="appTheme")return;
+ ["placeholder","aria-label","title"].forEach(attr=>{
+  if(node.hasAttribute(attr)){
+   const key="attr_"+attr;
+   if(!original.has(node[key]))original.set(node[key],node.getAttribute(attr));
+   const source=original.get(node[key]);
+   node.setAttribute(attr,(D[current]||{})[source]||source);
+  }
+ });
+ node.childNodes.forEach(translateNode);
+}
+}
+
+function applyLanguage(){
+current=$("appLanguage").value;
+document.documentElement.lang=current;
+document.querySelectorAll("body *").forEach(translateNode);
+localStorage.setItem("zarakhoustra_language",current);
+}
+
+/* Thème */
 const theme=$("appTheme");
 const lang=$("appLanguage");
-
-theme.value=localStorage.getItem("zarathoustra_theme")||"light";
-lang.value=localStorage.getItem("zarathoustra_language")||"fr";
+theme.value=localStorage.getItem("zarakhoustra_theme")||"light";
+lang.value=localStorage.getItem("zarakhoustra_language")||"fr";
 
 function applyTheme(){
 document.documentElement.dataset.theme=theme.value;
-localStorage.setItem("zarathoustra_theme",theme.value);
+localStorage.setItem("zarakhoustra_theme",theme.value);
 }
 theme.onchange=applyTheme;
-lang.onchange=()=>{
-localStorage.setItem("zarathoustra_language",lang.value);
-};
+lang.onchange=applyLanguage;
 applyTheme();
+applyLanguage();
 
-/* Correction du nom dans les textes générés */
+/* Traduire aussi les éléments ajoutés dynamiquement */
 const observer=new MutationObserver(()=>{
-document.querySelectorAll("header h1").forEach(e=>{
-if(e.textContent==="ZARATHOUSTRA")e.textContent="Zarathoustra";
-});
+ if(current!=="fr"){
+  document.querySelectorAll("body *").forEach(translateNode);
+ }
 });
 observer.observe(document.body,{childList:true,subtree:true});
+
+/* Nom officiel dans l’en-tête */
+const nameObserver=new MutationObserver(()=>{
+const h=document.querySelector("header h1");
+if(h&&h.textContent!=="ZARAKOUSTRA")h.textContent="ZARAKOUSTRA";
+});
+nameObserver.observe(document.body,{childList:true,subtree:true});
 })();
 </script>
 </body>
 </html>
 
-</body>
-</html>
