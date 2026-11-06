@@ -2082,6 +2082,69 @@ onSnapshot(query(collection(db,'products'),where('ok','==',true)),s=>{
 items=s.docs.map(d=>({id:d.id,...d.data()}));
 if(B.classList.contains('catmode'))draw();
 },()=>{});
+</script><style>
+#salesPanel{display:none!important}
+body[data-tab="acc"][data-sub="xsales"] #salesPanel:not([hidden]){display:flex!important}
+body[data-tab="acc"][data-sub] :is(#sellp,#adm,#xagadm,#authp){display:none!important}
+</style>
+<script type="module">
+const $=id=>document.getElementById(id);
+const B=document.body;
+const SECS=['xmine','xrev','xfaq','xnotif','xfol','xmoney'];
+
+/* bouton dans les Paramètres */
+const sp=$('settingsPanel');
+const sb=document.createElement('button');
+sb.type='button';sb.className='btn2';sb.dataset.open='xsales';
+sb.textContent='🛒 Mes ventes et achats';
+const ref=sp.querySelector('[data-open="xmine"]');
+if(ref)ref.after(sb);else sp.append(sb);
+
+function openSales(){
+SECS.forEach(s=>{const x=$(s);if(x)x.hidden=true;});
+B.classList.remove('settings-open');
+B.dataset.sub='xsales';
+window.scrollTo(0,0);
+}
+
+/* « Voir mes ventes » dans les Notifications */
+$('xnotif').addEventListener('click',e=>{
+const b=e.target.closest('button');
+if(b&&b.textContent==='Voir mes ventes'){e.stopPropagation();openSales();}
+},true);
+
+/* « Ouvrir l'annonce pour noter » : retour à l'accueil pour voir l'annonce */
+$('salesList').addEventListener('click',e=>{
+const b=e.target.closest('button');
+if(b&&b.textContent.startsWith('Ouvrir'))
+document.querySelector('#xnav button[data-k="home"]').click();
+},true);
+</script><style>
+#adm{display:none!important}
+body[data-tab="acc"][data-sub="xadm"] :is(#adm,#xagadm):not([hidden]):not(:empty){display:flex!important}
+body[data-tab="acc"]:not([data-sub="xadm"]) #xagadm{display:none!important}
+</style>
+<script type="module">
+import {getApp} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-app.js";
+import {getAuth,onAuthStateChanged} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-auth.js";
+const $=id=>document.getElementById(id);
+const ADMIN='rBxaE8OltfeNwvpUivDdqZqhxjl1';
+const sp=$('settingsPanel');
+const mb=document.createElement('button');
+mb.type='button';mb.className='btn2';mb.dataset.open='xadm';
+mb.textContent='🛡️ Modération';
+mb.hidden=true;
+const ref=sp.querySelector('[data-open="xmine"]');
+if(ref)ref.before(mb);else sp.append(mb);
+
+function count(){
+const b=$('adm').querySelector('b');
+const m=b&&b.textContent.match(/\((\d+)\)/);
+const n=m?Number(m[1]):0;
+mb.textContent='🛡️ Modération'+(n?' ('+n+' à valider)':'');
+}
+new MutationObserver(count).observe($('adm'),{childList:true,subtree:true});
+onAuthStateChanged(getAuth(getApp()),u=>{mb.hidden=!(u&&u.uid===ADMIN);count();});
 </script>
 </body>
 </html>
