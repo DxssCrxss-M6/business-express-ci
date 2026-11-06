@@ -982,8 +982,17 @@ panel.innerHTML=`
 <p class="mu">WhatsApp : +225 0170075417</p>
 <p class="mu">E-mail : businessci1213@gmail.com</p>
 `;
-$("xacc").append(panel);
+const settingsBtn=document.createElement("button");
+settingsBtn.type="button";
+settingsBtn.className="btn2";
+settingsBtn.textContent="⚙️ Paramètres";
 
+settingsBtn.onclick=()=>{
+  panel.style.display=panel.style.display==="flex"?"none":"flex";
+};
+
+$("xacc").prepend(settingsBtn);
+$("xacc").append(panel);
 /* Dictionnaire de traduction */
 const D={
 en:{
@@ -1103,6 +1112,7 @@ de:{
 
 /* Texte français -> traduction */
 const original=new WeakMap();
+const originalAttrs=new WeakMap();
 let current="fr";
 
 function translateNode(node){
