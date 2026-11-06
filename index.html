@@ -1001,11 +1001,38 @@ setTimeout(()=>xag.scrollIntoView(),50);
   --hd:#FFFFFF;
   --ac:#65BDEB;
 }
-#settingsPanel{display:none}body[data-tab="acc"].settings-open #xacc > :not(#settingsPanel){
+#settingsPanel{
+  display:none;
+  flex-direction:column;
+  gap:12px;
+}
+
+body[data-tab="acc"].settings-open #settingsPanel{
+  display:flex;
+}
+
+body[data-tab="acc"].settings-open #xacc > :not(#settingsPanel){
   display:none !important;
-  }
-body[data-tab="acc"] #settingsPanel{display:flex}
-#settingsPanel label{display:block;font-weight:600}
+}
+
+#settingsPanel label{
+  display:block;
+  font-weight:600;
+}
+
+/* Masquer les autres rubriques pendant l'ouverture des paramètres */
+body[data-tab="acc"].settings-open #xgrid,
+body[data-tab="acc"].settings-open #xag,
+body[data-tab="acc"].settings-open #xagadm,
+body[data-tab="acc"].settings-open #xmine,
+body[data-tab="acc"].settings-open #xrev,
+body[data-tab="acc"].settings-open #xfaq,
+body[data-tab="acc"].settings-open #xnotif,
+body[data-tab="acc"].settings-open #xfol,
+body[data-tab="acc"].settings-open #xmoney,
+body[data-tab="acc"].settings-open #xname{
+  display:none !important;
+}
 </style>
 
 <script type="module">
