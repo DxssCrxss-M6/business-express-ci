@@ -734,36 +734,64 @@ chats=[...new Map([...bch,...sch].map(x=>[x.id,x])).values()].sort((a,b)=>(b.t||
 if(tab==='msg'&&!thread)renderMsg();
 }
 
-/* Mon compte */
+/* MON COMPTE ET PARAMÈTRES */
 function renderAcc(){
 const settings=$('settingsPanel');
-
 xacc.replaceChildren();
 
 if(!user){
+document.body.classList.remove('settings-open');
 $('authp').hidden=false;
-if(settings)xacc.append(settings);
 return;
 }
 
+const head=h('div',null,'row');
+head.style.cssText='align-items:center;justify-content:space-between';
+
+const title=h('h2','Mon compte');
+title.style.margin='0';
+
+const gear=btn('⚙️','btn2',()=>{
+document.body.classList.add('settings-open');
+settings.scrollIntoView();
+});
+gear.title='Ouvrir les paramètres';
+gear.style.cssText='min-width:48px;font-size:21px;padding:0 12px';
+
+head.append(title,gear);
+
 xacc.append(
-h('h2','Mon compte'),
-h('p','Compte connecté ✓','mu'),
-btn('Changer mon mot de passe','btn2',async()=>{
-try{
-await sendPasswordResetEmail(auth,user.email);
-alert('Un lien t’a été envoyé par e-mail.');
-}
-catch(e){
-alert('Envoi impossible.');
-}
-})
+head,
+h('p','Compte connecté ✓','mu')
 );
 
-if(settings)xacc.append(settings);
+if(settings){
+
+if(!settings.querySelector('.settings-back')){
+const back=btn('← Retour à Mon compte','btn2',()=>{
+document.body.classList.remove('settings-open');
+window.scrollTo(0,0);
+});
+back.classList.add('settings-back');
+settings.prepend(back);
 }
 
-onAuthStateChanged(auth,u=>{
+if(!settings.querySelector('.account-password')){
+const pass=btn('🔐 Changer mon mot de passe','btn2',async()=>{
+try{
+await sendPasswordResetEmail(auth,user.email);
+alert('Un lien de réinitialisation a été envoyé par e-mail.');
+}catch(e){
+alert('Envoi impossible. Réessaie.');
+}
+});
+pass.classList.add('account-password');
+settings.append(pass);
+}
+
+xacc.append(settings);
+}
+}
 user=u;
 unsubs.forEach(f=>f());unsubs=[];
 bch=[];sch=[];chats=[];thread=null;
@@ -973,7 +1001,9 @@ setTimeout(()=>xag.scrollIntoView(),50);
   --hd:#FFFFFF;
   --ac:#65BDEB;
 }
-#settingsPanel{display:none}
+#settingsPanel{display:none}body[data-tab="acc"].settings-open #xacc > :not(#settingsPanel){
+  display:none !important;
+  }
 body[data-tab="acc"] #settingsPanel{display:flex}
 #settingsPanel label{display:block;font-weight:600}
 </style>
