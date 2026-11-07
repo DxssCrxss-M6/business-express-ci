@@ -50,6 +50,18 @@ border-radius:10px;padding:8px;font-size:14px}
 .chk input{width:auto;min-height:0}
 #terms p{margin:0;font-size:14px}
 [hidden]{display:none!important}
+
+header{padding:10px 14px}
+header h1{flex:1;text-align:center;font-size:24px;font-weight:900;
+letter-spacing:1px;text-transform:uppercase}
+.pf{display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer}
+.pft{font-size:11px;font-weight:700}
+.pfa{position:relative;width:44px;height:44px}
+.pfa img{width:100%;height:100%;border-radius:50%;object-fit:cover;border:2px solid #fff}
+.pfc{position:absolute;right:-6px;bottom:-4px;font-size:12px;font-style:normal;
+background:#fff;border-radius:50%;padding:2px}
+header #top{background:transparent;color:#000;border:2px solid #000}
+</style>
 </style>
 </head>
 <body>
@@ -2152,7 +2164,27 @@ mb.textContent='🛡️ Modération'+(n?' ('+n+' à valider)':'');
 }
 new MutationObserver(count).observe($('adm'),{childList:true,subtree:true});
 onAuthStateChanged(getAuth(getApp()),u=>{mb.hidden=!(u&&u.uid===ADMIN);count();});
+</script></script>
+
+<script>
+(function(){
+const img=document.getElementById('pfimg'),inp=document.getElementById('pfin');
+try{const s=localStorage.getItem('pfphoto');if(s)img.src=s;}catch(e){}
+inp.onchange=()=>{
+const f=inp.files[0];if(!f)return;
+const r=new FileReader();
+r.onload=()=>{const im=new Image();im.onload=()=>{
+const c=document.createElement('canvas');c.width=c.height=120;
+const s=Math.min(im.width,im.height);
+c.getContext('2d').drawImage(im,(im.width-s)/2,(im.height-s)/2,s,s,0,0,120,120);
+const d=c.toDataURL('image/jpeg',0.7);
+img.src=d;try{localStorage.setItem('pfphoto',d);}catch(e){}
+};im.src=r.result;};
+r.readAsDataURL(f);
+};
+})();
 </script>
+
 </body>
 </html>
 
