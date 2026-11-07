@@ -75,17 +75,22 @@ header #top{background:transparent;color:#000;border:2px solid #000}
 .pfa img{border:3px solid #000}
 .pft{order:2;margin-top:2px}
 .pfc{border:1.5px solid #000}
-
-/* Logo néon futuriste monochrome */
+  
 header h1{
-flex:0 1 auto;margin:0 4px;padding:6px 9px;border-radius:10px;
-font-family:'Orbitron','Segoe UI',system-ui,sans-serif;
-font-weight:900;font-size:clamp(11px,3.7vw,19px);letter-spacing:.08em;
+flex:0 1 auto;margin:0;
+padding:6px calc(10px + 1.15cm);
+border:3px solid #000;border-radius:14px;
+background:#fff;
+box-shadow:4px 4px 0 #000;
+animation:none;
+font-family:'Montserrat','Arial Black',Arial,sans-serif;
+font-weight:900;font-size:clamp(18px,5vw,26px);letter-spacing:.03em;
 text-transform:uppercase;white-space:nowrap;min-width:0;
-color:#E8FDFF;background:#06121F;border:1.5px solid #00E5FF;
-text-shadow:0 0 4px #fff,0 0 10px #00E5FF,0 0 22px #00E5FF,0 0 38px #00B8D4;
-box-shadow:0 0 8px #00E5FF,inset 0 0 8px rgba(0,229,255,.45);
-animation:zkneon 3.2s ease-in-out infinite;
+color:#0B2545;
+text-shadow:
+-2px -2px 0 #000,2px -2px 0 #000,
+-2px 2px 0 #000,2px 2px 0 #000,
+0 3px 0 #000;
 }
 @keyframes zkneon{
 0%,100%{box-shadow:0 0 8px #00E5FF,inset 0 0 8px rgba(0,229,255,.45)}
