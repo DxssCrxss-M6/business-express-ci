@@ -54,10 +54,17 @@ border-radius:10px;padding:8px;font-size:14px}
 </head>
 <body>
 <header>
-<h1>ZARATHOUSTRA</h1>
+<label class="pf">
+<span class="pft">Profil</span>
+<span class="pfa">
+<img id="pfimg" alt="Profil" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' fill='%23fff'/%3E%3Ccircle cx='20' cy='15' r='7' fill='%233E5C76'/%3E%3Cellipse cx='20' cy='36' rx='13' ry='10' fill='%233E5C76'/%3E%3C/svg%3E">
+<i class="pfc">📷</i>
+</span>
+<input id="pfin" type="file" accept="image/*" hidden>
+</label>
+<h1>ZARAKOUSTRA</h1>
 <button id="top" type="button">Connexion</button>
 </header>
-<main>
 <section id="authp" hidden>
 <h2>Connexion</h2>
 <input id="em" type="email" placeholder="E-mail" autocomplete="email">
