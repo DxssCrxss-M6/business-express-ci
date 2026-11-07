@@ -2164,7 +2164,7 @@ mb.textContent='🛡️ Modération'+(n?' ('+n+' à valider)':'');
 }
 new MutationObserver(count).observe($('adm'),{childList:true,subtree:true});
 onAuthStateChanged(getAuth(getApp()),u=>{mb.hidden=!(u&&u.uid===ADMIN);count();});
-</script></script>
+</script>
 
 <script>
 (function(){
